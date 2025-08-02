@@ -143,15 +143,19 @@
     });
 
     function update() {
-      // 移動邏輯
-      caterpillar.vx = 0;
-      caterpillar.vy = 0;
+      // 若鍵盤控制，則優先採用
+      let usingKeyboard = keys["w"] || keys["s"] || keys["a"] || keys["d"];
 
-      if (keys["w"]) caterpillar.vy = -caterpillar.speed;
-      if (keys["s"]) caterpillar.vy = caterpillar.speed;
-      if (keys["a"]) caterpillar.vx = -caterpillar.speed;
-      if (keys["d"]) caterpillar.vx = caterpillar.speed;
+      if (usingKeyboard) {
+        caterpillar.vx = 0;
+        caterpillar.vy = 0;
+        if (keys["w"]) caterpillar.vy = -caterpillar.speed;
+        if (keys["s"]) caterpillar.vy = caterpillar.speed;
+        if (keys["a"]) caterpillar.vx = -caterpillar.speed;
+        if (keys["d"]) caterpillar.vx = caterpillar.speed;
+      }
 
+      // 根據 vx/vy 移動（不論來源是鍵盤或搖桿）
       caterpillar.x += caterpillar.vx;
       caterpillar.y += caterpillar.vy;
 
@@ -159,6 +163,7 @@
       caterpillar.x = Math.max(caterpillar.radius, Math.min(game.width - caterpillar.radius, caterpillar.x));
       caterpillar.y = Math.max(caterpillar.radius, Math.min(game.height - caterpillar.radius, caterpillar.y));
     }
+
 
     function draw() {
       // 清除畫面
