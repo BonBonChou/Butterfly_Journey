@@ -7,19 +7,17 @@ body {
 
 #game-container {
   position: relative;
-  width: 800px;
-  height: 600px;
-  margin: 20px auto;
-  background-color: rgba(0, 0, 0, 0.3); /* 半透明深色背景 */
-  border-radius: 10px;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.2);
+  touch-action: none;
 }
 
 /* 遊戲畫布 */
 #game-canvas {
   display: block;
   width: 100%;
-  height: 80vh;
-  overflow: hidden;
+  height: 100%;
   background-color: transparent;
 }
 
