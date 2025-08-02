@@ -1,10 +1,8 @@
-﻿/* 預設樣式重設與背景色 */
+/* 預設樣式重設與背景色 */
 body {
   margin: 0;
   padding: 0;
-  background-color: #234c2f;
-  font-family: "Segoe UI", sans-serif;
-  color: white;
+  background-color: transparent;//background-color: #234c2f;
 }
 
 #game-container {
@@ -12,18 +10,42 @@ body {
   width: 800px;
   height: 600px;
   margin: 20px auto;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
-  border: 4px solid #0a0;
+  background-color: rgba(0, 0, 0, 0.3); /* 半透明深色背景 */
   border-radius: 10px;
-  background-color: #111;
 }
 
 /* 遊戲畫布 */
 #game-canvas {
   display: block;
   width: 100%;
-  height: 100%;
-  background-color: #1e1e1e;
+  height: 80vh;
+  overflow: hidden;
+  background-color: transparent;
+}
+
+/* 虛擬搖桿區 */
+#joystick-container {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  width: 100px;
+  height: 100px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 50%;
+  touch-action: none;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #aaa;
+}
+
+#joystick {
+  width: 40px;
+  height: 40px;
+  background-color: rgba(0, 255, 0, 0.5);
+  border-radius: 50%;
+  position: relative;
 }
 
 /* UI 區域 */
