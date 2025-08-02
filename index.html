@@ -4,7 +4,93 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>蝴蝶旅程</title>
-  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* 預設樣式重設與背景色 */
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: transparent;//background-color: #234c2f;
+    }
+
+    #game-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0, 0, 0, 0.2);
+      touch-action: none;
+    }
+
+    /* 遊戲畫布 */
+    #game-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background-color: transparent;
+    }
+
+    /* 虛擬搖桿區 */
+    #joystick-container {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      width: 100px;
+      height: 100px;
+      background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 50%;
+      touch-action: none;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #aaa;
+    }
+
+    #joystick {
+      width: 40px;
+      height: 40px;
+      background-color: rgba(0, 255, 0, 0.5);
+      border-radius: 50%;
+      position: relative;
+    }
+
+    /* UI 區域 */
+    #ui {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 10;
+    }
+
+    /* 能量條與生命條樣式 */
+    .bar-wrapper {
+      margin-bottom: 10px;
+    }
+
+    .bar {
+      width: 200px;
+      height: 20px;
+      background-color: #555;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 2px;
+    }
+
+    .fill {
+      height: 100%;
+      width: 100%;
+      transition: width 0.2s linear;
+      border-radius: 10px;
+    }
+
+    .energy-bar .fill {
+      background-color: #33cfff;
+    }
+
+    .health-bar .fill {
+      background-color: #ff4e4e;
+    }
+
+  </style>
 </head>
 <body>
   <div id="game-container">
@@ -23,6 +109,138 @@
       </div>
     </div>
   </div>
-  <script src="game.js"></script>
+  <script>
+    const canvas = document.getElementById("game-canvas");
+    const ctx = canvas.getContext("2d");
+
+    const energyBar = document.getElementById("energy-fill");
+    const healthBar = document.getElementById("health-fill");
+
+    const game = {
+      width: canvas.width,
+      height: canvas.height,
+      running: true,
+    };
+
+    // === 主角毛毛蟲 ===
+    const caterpillar = {
+      x: game.width / 2,
+      y: game.height / 2,
+      radius: 15,
+      speed: 2,
+      energy: 100,
+      health: 3,
+      vx: 0,
+      vy: 0,
+    };
+
+    // === 鍵盤控制 ===
+    const keys = {};
+    document.addEventListener("keydown", (e) => {
+      keys[e.key.toLowerCase()] = true;
+    });
+    document.addEventListener("keyup", (e) => {
+      keys[e.key.toLowerCase()] = false;
+    });
+
+    function update() {
+      // 移動邏輯
+      caterpillar.vx = 0;
+      caterpillar.vy = 0;
+
+      if (keys["w"]) caterpillar.vy = -caterpillar.speed;
+      if (keys["s"]) caterpillar.vy = caterpillar.speed;
+      if (keys["a"]) caterpillar.vx = -caterpillar.speed;
+      if (keys["d"]) caterpillar.vx = caterpillar.speed;
+
+      caterpillar.x += caterpillar.vx;
+      caterpillar.y += caterpillar.vy;
+
+      // 邊界限制
+      caterpillar.x = Math.max(caterpillar.radius, Math.min(game.width - caterpillar.radius, caterpillar.x));
+      caterpillar.y = Math.max(caterpillar.radius, Math.min(game.height - caterpillar.radius, caterpillar.y));
+    }
+
+    function draw() {
+      // 清除畫面
+      ctx.clearRect(0, 0, game.width, game.height);
+
+      // 畫毛毛蟲
+      ctx.beginPath();
+      ctx.arc(caterpillar.x, caterpillar.y, caterpillar.radius, 0, Math.PI * 2);
+      ctx.fillStyle = "#00ff00";
+      ctx.fill();
+    }
+
+    function drawUI() {
+      // 更新能量條與血條
+      energyBar.style.width = `${caterpillar.energy}%`;
+      healthBar.style.width = `${(caterpillar.health / 3) * 100}%`;
+    }
+
+    function gameOver() {
+      game.running = false;
+      ctx.fillStyle = "white";
+      ctx.font = "36px sans-serif";
+      ctx.fillText("遊戲結束", game.width / 2 - 80, game.height / 2);
+    }
+
+    function gameLoop() {
+      if (!game.running) return;
+      update();
+      draw();
+      drawUI();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // === 能量每秒自動減少 ===
+    setInterval(() => {
+      if (!game.running) return;
+      caterpillar.energy -= 1;
+      if (caterpillar.energy <= 0) {
+        caterpillar.energy = 0;
+        gameOver();
+      }
+    }, 1000);
+
+    // === 虛擬搖桿控制 ===
+    const joystickContainer = document.getElementById("joystick-container");
+    const joystick = document.getElementById("joystick");
+    let dragging = false;
+    let joyStart = { x: 0, y: 0 };
+
+    joystickContainer.addEventListener("touchstart", (e) => {
+      dragging = true;
+      joyStart = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+      };
+    });
+
+    joystickContainer.addEventListener("touchmove", (e) => {
+      if (!dragging) return;
+
+      const x = e.touches[0].clientX - joyStart.x;
+      const y = e.touches[0].clientY - joyStart.y;
+      const len = Math.sqrt(x * x + y * y);
+
+      // 計算方向向量並控制移動速度
+      if (len > 0) {
+        caterpillar.vx = (x / len) * caterpillar.speed;
+        caterpillar.vy = (y / len) * caterpillar.speed;
+      }
+    });
+
+    joystickContainer.addEventListener("touchend", () => {
+      dragging = false;
+      caterpillar.vx = 0;
+      caterpillar.vy = 0;
+    });
+
+
+    // 啟動遊戲
+    gameLoop();
+
+  </script>
 </body>
 </html>
