@@ -31,18 +31,17 @@
     /* 虛擬搖桿區 */
     #joystick-container {
       position: absolute;
-      bottom: 20px;
-      left: 20px;
       width: 100px;
       height: 100px;
       background-color: rgba(255, 255, 255, 0.05);
       border-radius: 50%;
       touch-action: none;
       z-index: 20;
-      display: flex;
+      display: none; /* 一開始不顯示 */
       align-items: center;
       justify-content: center;
       border: 2px solid #aaa;
+      pointer-events: none; /* 重要！避免攔截滑動 */
     }
 
     #joystick {
@@ -209,34 +208,46 @@
     let dragging = false;
     let joyStart = { x: 0, y: 0 };
 
-    joystickContainer.addEventListener("touchstart", (e) => {
+    // 顯示搖桿並設定初始位置
+    function showJoystick(x, y) {
+      joystickContainer.style.display = "flex";
+      joystickContainer.style.left = `${x - 50}px`; // 中心對齊
+      joystickContainer.style.top = `${y - 50}px`;
+      joyStart = { x, y };
+    }
+
+    // 隱藏搖桿
+    function hideJoystick() {
+      joystickContainer.style.display = "none";
+      caterpillar.vx = 0;
+      caterpillar.vy = 0;
+    }
+
+    window.addEventListener("touchstart", (e) => {
+      const touch = e.touches[0];
+      showJoystick(touch.clientX, touch.clientY);
       dragging = true;
-      joyStart = {
-        x: e.touches[0].clientX,
-        y: e.touches[0].clientY,
-      };
     });
 
-    joystickContainer.addEventListener("touchmove", (e) => {
+    window.addEventListener("touchmove", (e) => {
       if (!dragging) return;
+      const touch = e.touches[0];
+      const dx = touch.clientX - joyStart.x;
+      const dy = touch.clientY - joyStart.y;
+      const len = Math.sqrt(dx * dx + dy * dy);
 
-      const x = e.touches[0].clientX - joyStart.x;
-      const y = e.touches[0].clientY - joyStart.y;
-      const len = Math.sqrt(x * x + y * y);
-
-      // 計算方向向量並控制移動速度
       if (len > 0) {
-        caterpillar.vx = (x / len) * caterpillar.speed;
-        caterpillar.vy = (y / len) * caterpillar.speed;
+        const normX = dx / len;
+        const normY = dy / len;
+        caterpillar.vx = normX * caterpillar.speed;
+        caterpillar.vy = normY * caterpillar.speed;
       }
     });
 
-    joystickContainer.addEventListener("touchend", () => {
+    window.addEventListener("touchend", () => {
       dragging = false;
-      caterpillar.vx = 0;
-      caterpillar.vy = 0;
+      hideJoystick();
     });
-
 
     // 啟動遊戲
     gameLoop();
