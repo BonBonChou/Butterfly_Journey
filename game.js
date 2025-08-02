@@ -1,4 +1,4 @@
-﻿const canvas = document.getElementById("game-canvas");
+const canvas = document.getElementById("game-canvas");
 const ctx = canvas.getContext("2d");
 
 const energyBar = document.getElementById("energy-fill");
@@ -90,6 +90,41 @@ setInterval(() => {
     gameOver();
   }
 }, 1000);
+
+// === 虛擬搖桿控制 ===
+const joystickContainer = document.getElementById("joystick-container");
+const joystick = document.getElementById("joystick");
+let dragging = false;
+let joyStart = { x: 0, y: 0 };
+
+joystickContainer.addEventListener("touchstart", (e) => {
+  dragging = true;
+  joyStart = {
+    x: e.touches[0].clientX,
+    y: e.touches[0].clientY,
+  };
+});
+
+joystickContainer.addEventListener("touchmove", (e) => {
+  if (!dragging) return;
+
+  const x = e.touches[0].clientX - joyStart.x;
+  const y = e.touches[0].clientY - joyStart.y;
+  const len = Math.sqrt(x * x + y * y);
+
+  // 計算方向向量並控制移動速度
+  if (len > 0) {
+    caterpillar.vx = (x / len) * caterpillar.speed;
+    caterpillar.vy = (y / len) * caterpillar.speed;
+  }
+});
+
+joystickContainer.addEventListener("touchend", () => {
+  dragging = false;
+  caterpillar.vx = 0;
+  caterpillar.vy = 0;
+});
+
 
 // 啟動遊戲
 gameLoop();
