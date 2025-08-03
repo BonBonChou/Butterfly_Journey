@@ -136,6 +136,7 @@
       health: 3,
       vx: 0,
       vy: 0,
+      facingAngle: Math.PI / 2,
     };
 
     // === 鍵盤控制 ===
@@ -151,13 +152,24 @@
       // 若鍵盤控制，則優先採用
       let usingKeyboard = keys["w"] || keys["s"] || keys["a"] || keys["d"];
 
-      if (usingKeyboard) {
-        caterpillar.vx = 0;
-        caterpillar.vy = 0;
-        if (keys["w"]) caterpillar.vy = -caterpillar.speed;
-        if (keys["s"]) caterpillar.vy = caterpillar.speed;
-        if (keys["a"]) caterpillar.vx = -caterpillar.speed;
-        if (keys["d"]) caterpillar.vx = caterpillar.speed;
+      // 重新設為 0
+      caterpillar.vx = 0;
+      caterpillar.vy = 0;
+
+      // 按著才移動
+      if (keys["w"]) caterpillar.vy -= 1;
+      if (keys["s"]) caterpillar.vy += 1;
+      if (keys["a"]) caterpillar.vx -= 1;
+      if (keys["d"]) caterpillar.vx += 1;
+
+      // 計算合併方向後的移動向量長度
+      let len = Math.hypot(caterpillar.vx, caterpillar.vy);
+      if (len > 0) {
+        caterpillar.vx = (caterpillar.vx / len) * caterpillar.speed;
+        caterpillar.vy = (caterpillar.vy / len) * caterpillar.speed;
+
+        // 更新面朝角度（與虛擬搖桿一致）
+        caterpillar.facingAngle = Math.atan2(caterpillar.vy, caterpillar.vx);
       }
 
       // 根據 vx/vy 移動（不論來源是鍵盤或搖桿）
@@ -174,18 +186,36 @@
       // 清除畫面
       ctx.clearRect(0, 0, game.width, game.height);
 
-      // 畫毛毛蟲
+      // === 畫毛毛蟲 ===
       if (caterpillarImg.complete) {
         const size = caterpillar.radius * 2;
-        ctx.drawImage(caterpillarImg, caterpillar.x - caterpillar.radius, caterpillar.y - caterpillar.radius, size, size);
+
+        // 計算角度（使用 vx 和 vy 計算移動方向）
+        const angle = Math.atan2(caterpillar.vy, caterpillar.vx); // (x, y) x 軸正向的夾角
+
+        // 有移動才更新角度
+        if (caterpillar.vx !== 0 || caterpillar.vy !== 0) {
+          caterpillar.facingAngle = angle;
+        }
+
+        ctx.save();
+        ctx.translate(caterpillar.x, caterpillar.y);
+        ctx.rotate((caterpillar.facingAngle || 0) + Math.PI / 2);
+        ctx.drawImage(
+          caterpillarImg,
+          -caterpillar.radius,
+          -caterpillar.radius,
+          size,
+          size
+        );
+        ctx.restore();
       } else {
-        // 如果圖片尚未載入，先用圓形代替
+        // 圖片未載入時用圓形
         ctx.beginPath();
         ctx.arc(caterpillar.x, caterpillar.y, caterpillar.radius, 0, Math.PI * 2);
         ctx.fillStyle = "#00ff00";
         ctx.fill();
       }
-
     }
 
     function drawUI() {
