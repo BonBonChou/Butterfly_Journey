@@ -1,0 +1,131 @@
+﻿<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>結尾頁面</title>
+  <style>
+    body {
+      margin: 0;
+      background: transparent;
+      //background: radial-gradient(ellipse at center, #000 0%, #111 100%);
+      //overflow: hidden;
+      font-family: 'Noto Sans TC', sans-serif;
+      color: white;
+      text-align: center;
+    }
+
+    .hidden { display: none; }
+    button {
+      margin: 1em;
+      padding: 0.75em 2em;
+      font-size: 1.2em;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      background: #1e90ff;
+      color: white;
+      transition: background 0.3s ease;
+    }
+    button:hover { background: #63b3ed; }
+
+    .container {
+      background-color: rgba(0, 0, 0, 0.8);
+      position: relative;
+      max-width: 700px;
+      margin: auto;
+      z-index: 1;
+      padding-top: 5vh;
+    }
+
+    img.logo-img {
+      width: 50%;
+      //height: auto;
+      max-width: 600px;
+      margin-top: 0.5em;
+    }
+
+    h1 {
+      font-size: 2.4em;
+      margin-bottom: 0.5em;
+      color: #00ffcc;
+    }
+
+    h4 {
+      font-size: 1.4em;
+      line-height: 1.6;
+      margin-top: 1em;
+      margin-bottom: 1em;
+    }
+
+    h5 {
+      font-size: 1.2em;
+      line-height: 1.2;
+      margin-top: 0em;
+      margin-bottom: 1em;
+      color: #b5fff0;
+    }
+
+    h6 {
+      font-size: 1.5em;
+      margin: 1em 0;
+      text-align: center;
+    }
+
+    .fuel-status {
+      color: #00ccff;
+      margin-top: 0.5em;
+      margin-bottom: 1em;
+    }
+
+    @keyframes rainbow {
+      0% { background-position: 100% 50%; }
+      50% { background-position: 0% 50%; }
+      100% { background-position: 100% 50%; }
+    }
+    
+    #final-highlight {
+      font-size: 2em;
+      margin: 1em 0;
+      font-weight: bold;
+      text-align: center;
+      background: linear-gradient(270deg, red, orange, yellow, green, blue, indigo, violet, red);
+      background-size: 400% 400%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: rainbow 2s ease infinite;
+    }
+
+     .endscore-display {
+      margin-top: 1em;
+      font-size: 1.8em;
+      color: #00ffcc;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="final-message-screen">
+      <h1>Game Over</h1>
+      <h4>在這場橫跨宇宙的航行中，<br>從太陽系啟程，<br>一路見證恆星的生老病死，<br>最後看見壯麗的宇宙。<br><br>在這廣袤無垠的宇宙中，<br>地球或許只是一顆微小的藍色星球，</h4>
+      <h2 id="final-highlight">但正是這顆星球，<br>讓我們能仰望星空、探索宇宙。</h2>
+      <div class="endscore-display" id="endscore-display"></div>
+      <button onclick="restartGame()">重新探索宇宙</button>
+    </div>
+  </div>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const score = localStorage.getItem('score') || 0;
+      document.getElementById("endscore-display").textContent = `你的總分：${score}`;
+    });
+    function restartGame() {
+      localStorage.removeItem('score');  // 清除總分
+      localStorage.removeItem('fuel');   // 清除燃料
+      location.href = "https://bonbonchou.github.io/Butterfly_Journey/index.html";
+    }
+  </script>
+
+</body>
+</html>
