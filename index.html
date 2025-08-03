@@ -1,304 +1,124 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>蝴蝶旅程</title>
   <style>
-    /* 預設樣式重設與背景色 */
     body {
       margin: 0;
-      padding: 0;
-      background-color: transparent;//background-color: #234c2f;
+      background: transparent;
+      //overflow: hidden;
+      font-family: 'Noto Sans TC', sans-serif;
       color: white;
-      //text-align: center;
+      text-align: center;
     }
 
-    #game-container {
+    .hidden { display: none; }
+    button {
+      margin: 1em;
+      padding: 0.75em 2em;
+      font-size: 1.2em;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      background: #1e90ff;
+      color: white;
+      transition: background 0.3s ease;
+    }
+    button:hover { background: #63b3ed; }
+
+    .container {
       position: relative;
-      width: 100vw;
-      height: 100vh;
+      z-index: 1;
+      padding-top: 5vh;
       background-color: rgba(0, 0, 0, 0.8);
-      touch-action: none;
     }
 
-    /* 遊戲畫布 */
-    #game-canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-      background-color: transparent;
-    }
-
-    /* 虛擬搖桿區 */
-    #joystick-container {
-      position: absolute;
-      width: 100px;
-      height: 100px;
-      background-color: rgba(255, 255, 255, 0.05);
-      border-radius: 50%;
-      touch-action: none;
-      z-index: 20;
-      display: none; /* 一開始不顯示 */
-      align-items: center;
-      justify-content: center;
-      border: 2px solid #aaa;
-      pointer-events: none; /* 重要！避免攔截滑動 */
-    }
-
-    #joystick {
-      width: 40px;
-      height: 40px;
-      background-color: rgba(0, 255, 0, 0.5);
-      border-radius: 50%;
-      position: relative;
-    }
-
-    /* UI 區域 */
-    #ui {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      z-index: 10;
-    }
-
-    /* 能量條與生命條樣式 */
-    .bar-wrapper {
-      margin-bottom: 10px;
-    }
-
-    .bar {
-      width: 200px;
-      height: 20px;
-      background-color: #555;
-      border-radius: 10px;
-      overflow: hidden;
-      margin-top: 2px;
-    }
-
-    .fill {
-      height: 100%;
-      width: 100%;
-      transition: width 0.2s linear;
+    h1 {
+      font-size: 2.5em;             /* 字體大小 */
+      color: #ffffff;              /* 白色字體比較適合做光暈效果 */
+      font-weight: bold;           /* 粗體 */
+      text-align: center;          /* 置中 */
+      margin-bottom: 35px;         /* 下方留空 */
+      margin-top: 0px;
+      text-shadow: 
+        0 0 5px #00ffff,           /* 淺藍光暈 */
+        0 0 10px #00ffff,
+        0 0 15px #00ffff,
+        0 0 20px #00ffff;
+      /*background-color: #000000;   /* 建議加深背景讓光暈更明顯 */
+      padding: 0px;
       border-radius: 10px;
     }
 
-    .energy-bar .fill {
-      background-color: #33cfff;
+    h4 {
+      font-size: 1.4em;
+      line-height: 1.6;
+      margin-top: -1em;
+      margin-bottom: 1em;
+      color: #00ffcc;
     }
 
-    .health-bar .fill {
-      background-color: #ff4e4e;
+    h5 {
+      font-size: 1.2em;
+      line-height: 1.2;
+      margin-top: 0em;
+      margin-bottom: 1em;
+      color: #b5fff0;
     }
 
+    .intro {
+      text-align: justify;
+      margin-bottom: 0em;
+      background: rgba(255,255,255,0.05);
+      padding: 0.5em;
+      border-radius: 10px;
+    }
+
+    .link-bar {
+      margin-top: 3em;
+      font-size: 0.9em;
+    }
+
+    .link-bar a {
+      color: #66ccff;
+      margin: 0 10px;
+      text-decoration: none;
+    }
+
+    .link-bar a:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
-  <div id="game-container">
-    <canvas id="game-canvas" width="800" height="600"></canvas>
-    <div id="joystick-container">
-      <div id="joystick"></div>
-    </div>
-    <div id="ui">
-      <div class="bar-wrapper">
-        <label>能量</label>
-        <div class="bar energy-bar"><div class="fill" id="energy-fill"></div></div>
+
+  <div class="container">
+    <div id="start-screen">
+      <h1>關於我轉生<br>變成毛毛蟲這檔事</h1>
+      <h4>當人生重啟，卻變成一隻毛毛蟲…<br>命運已織就，踏上覺醒之路！</h4>
+      <div class="intro">
+        <h5>一覺醒來，我發現自己不是人類了。沒錯，我轉生了——變成一隻微不足道的毛毛蟲。在這片充滿掠食者的叢林，唯一的生存之道，就是「吃、躲、蛻變」。想活到成為蝴蝶？呵，我得先撐過那些想把我當午餐的傢伙！</h5>
+        <h5>立體劇場電影《蝴蝶奇幻旅程》的故事化為這款肉鴿小遊戲。從幼蟲開始，經歷掙扎、蛻變、飛翔。</h5>
+        <h5>蟲到蝶的傳說，現在開始書寫！</h5>
+        <h3>🔍 遊戲說明</h3>
+        <p>🌌 <strong>背景故事</strong><br>這是一款肉鴿探索的生存遊戲。你轉生成為一隻帝王斑蝶的幼蟲，從孵化開始，必須拼盡全力存活、覓食、閃避天敵，最終完成命定的蛻變。</p>
+        <p>🧠 <strong>玩法簡介</strong><br>以虛擬搖桿或 WASD 鍵操作毛毛蟲，探索環境、收集食物補充能量。</p>
+        <p>🏆 <strong>目標與結局</strong><br>當能量足夠、蛻變條件達成，你將進入蝴蝶階段，開啟飛行與遷徙之章。命運的終點可能是榮耀與自由，也可能是折翼墜地——一切由你決定！</p>
       </div>
-      <div class="bar-wrapper">
-        <label>生命</label>
-        <div class="bar health-bar"><div class="fill" id="health-fill"></div></div>
-      </div>
+      <button onclick="startGame()">開始探險</button>
     </div>
+    
   </div>
+
   <script>
-    const canvas = document.getElementById("game-canvas");
-    const ctx = canvas.getContext("2d");
-    const caterpillarImg = new Image();
-    caterpillarImg.src = 'https://raw.githubusercontent.com/BonBonChou/Butterfly_Journey/main/images/caterpillar.png'; // 確保你的圖片放在正確的資料夾中
-
-
-    const energyBar = document.getElementById("energy-fill");
-    const healthBar = document.getElementById("health-fill");
-
-    const game = {
-      width: canvas.width,
-      height: canvas.height,
-      running: true,
-    };
-
-    // === 主角毛毛蟲 ===
-    const caterpillar = {
-      x: game.width / 2,
-      y: game.height / 2,
-      radius: 30,
-      speed: 2,
-      energy: 100,
-      health: 3,
-      vx: 0,
-      vy: 0,
-      facingAngle: Math.PI / 2,
-    };
-
-    // === 鍵盤控制 ===
-    const keys = {};
-    document.addEventListener("keydown", (e) => {
-      keys[e.key.toLowerCase()] = true;
-    });
-    document.addEventListener("keyup", (e) => {
-      keys[e.key.toLowerCase()] = false;
-    });
-
-    function update() {
-      // 若鍵盤控制，則優先採用
-      let usingKeyboard = keys["w"] || keys["s"] || keys["a"] || keys["d"];
-
-      // 重新設為 0
-      caterpillar.vx = 0;
-      caterpillar.vy = 0;
-
-      // 按著才移動
-      if (keys["w"]) caterpillar.vy -= 1;
-      if (keys["s"]) caterpillar.vy += 1;
-      if (keys["a"]) caterpillar.vx -= 1;
-      if (keys["d"]) caterpillar.vx += 1;
-
-      // 計算合併方向後的移動向量長度
-      let len = Math.hypot(caterpillar.vx, caterpillar.vy);
-      if (len > 0) {
-        caterpillar.vx = (caterpillar.vx / len) * caterpillar.speed;
-        caterpillar.vy = (caterpillar.vy / len) * caterpillar.speed;
-
-        // 更新面朝角度（與虛擬搖桿一致）
-        caterpillar.facingAngle = Math.atan2(caterpillar.vy, caterpillar.vx);
-      }
-
-      // 根據 vx/vy 移動（不論來源是鍵盤或搖桿）
-      caterpillar.x += caterpillar.vx;
-      caterpillar.y += caterpillar.vy;
-
-      // 邊界限制
-      caterpillar.x = Math.max(caterpillar.radius, Math.min(game.width - caterpillar.radius, caterpillar.x));
-      caterpillar.y = Math.max(caterpillar.radius, Math.min(game.height - caterpillar.radius, caterpillar.y));
+    function startGame() {
+      //localStorage.removeItem('score');
+      //localStorage.removeItem('fuel');
+      location.href = "https://bonbonchou.github.io/Butterfly_Journey/game.html";
     }
-
-
-    function draw() {
-      // 清除畫面
-      ctx.clearRect(0, 0, game.width, game.height);
-
-      // === 畫毛毛蟲 ===
-      if (caterpillarImg.complete) {
-        const size = caterpillar.radius * 2;
-
-        // 計算角度（使用 vx 和 vy 計算移動方向）
-        const angle = Math.atan2(caterpillar.vy, caterpillar.vx); // (x, y) x 軸正向的夾角
-
-        // 有移動才更新角度
-        if (caterpillar.vx !== 0 || caterpillar.vy !== 0) {
-          caterpillar.facingAngle = angle;
-        }
-
-        ctx.save();
-        ctx.translate(caterpillar.x, caterpillar.y);
-        ctx.rotate((caterpillar.facingAngle || 0) + Math.PI / 2);
-        ctx.drawImage(
-          caterpillarImg,
-          -caterpillar.radius,
-          -caterpillar.radius,
-          size,
-          size
-        );
-        ctx.restore();
-      } else {
-        // 圖片未載入時用圓形
-        ctx.beginPath();
-        ctx.arc(caterpillar.x, caterpillar.y, caterpillar.radius, 0, Math.PI * 2);
-        ctx.fillStyle = "#00ff00";
-        ctx.fill();
-      }
-    }
-
-    function drawUI() {
-      // 更新能量條與血條
-      energyBar.style.width = `${caterpillar.energy}%`;
-      healthBar.style.width = `${(caterpillar.health / 3) * 100}%`;
-    }
-
-    function gameOver() {
-      game.running = false;
-      ctx.fillStyle = "white";
-      ctx.font = "36px sans-serif";
-      ctx.fillText("遊戲結束", game.width / 2 - 80, game.height / 2);
-    }
-
-    function gameLoop() {
-      if (!game.running) return;
-      update();
-      draw();
-      drawUI();
-      requestAnimationFrame(gameLoop);
-    }
-
-    // === 能量每秒自動減少 ===
-    setInterval(() => {
-      if (!game.running) return;
-      caterpillar.energy -= 1;
-      if (caterpillar.energy <= 0) {
-        caterpillar.energy = 0;
-        gameOver();
-      }
-    }, 1000);
-
-    // === 虛擬搖桿控制 ===
-    const joystickContainer = document.getElementById("joystick-container");
-    const joystick = document.getElementById("joystick");
-    let dragging = false;
-    let joyStart = { x: 0, y: 0 };
-
-    // 顯示搖桿並設定初始位置
-    function showJoystick(x, y) {
-      joystickContainer.style.display = "flex";
-      joystickContainer.style.left = `${x - 50}px`; // 中心對齊
-      joystickContainer.style.top = `${y - 50}px`;
-      joyStart = { x, y };
-    }
-
-    // 隱藏搖桿
-    function hideJoystick() {
-      joystickContainer.style.display = "none";
-      caterpillar.vx = 0;
-      caterpillar.vy = 0;
-    }
-
-    window.addEventListener("touchstart", (e) => {
-      const touch = e.touches[0];
-      showJoystick(touch.clientX, touch.clientY);
-      dragging = true;
-    });
-
-    window.addEventListener("touchmove", (e) => {
-      if (!dragging) return;
-      const touch = e.touches[0];
-      const dx = touch.clientX - joyStart.x;
-      const dy = touch.clientY - joyStart.y;
-      const len = Math.sqrt(dx * dx + dy * dy);
-
-      if (len > 0) {
-        const normX = dx / len;
-        const normY = dy / len;
-        caterpillar.vx = normX * caterpillar.speed;
-        caterpillar.vy = normY * caterpillar.speed;
-      }
-    });
-
-    window.addEventListener("touchend", () => {
-      dragging = false;
-      hideJoystick();
-    });
-
-    // 啟動遊戲
-    gameLoop();
-
   </script>
+
 </body>
 </html>
