@@ -151,25 +151,25 @@
     function update() {
       // 若鍵盤控制，則優先採用
       let usingKeyboard = keys["w"] || keys["s"] || keys["a"] || keys["d"];
-
-      // 重新設為 0
       caterpillar.vx = 0;
       caterpillar.vy = 0;
+      if (usingKeyboard) {
+        
+        // 按著才移動
+        if (keys["w"]) caterpillar.vy -= 1;
+        if (keys["s"]) caterpillar.vy += 1;
+        if (keys["a"]) caterpillar.vx -= 1;
+        if (keys["d"]) caterpillar.vx += 1;
 
-      // 按著才移動
-      if (keys["w"]) caterpillar.vy -= 1;
-      if (keys["s"]) caterpillar.vy += 1;
-      if (keys["a"]) caterpillar.vx -= 1;
-      if (keys["d"]) caterpillar.vx += 1;
+        // 計算合併方向後的移動向量長度
+        let len = Math.hypot(caterpillar.vx, caterpillar.vy);
+        if (len > 0) {
+          caterpillar.vx = (caterpillar.vx / len) * caterpillar.speed;
+          caterpillar.vy = (caterpillar.vy / len) * caterpillar.speed;
 
-      // 計算合併方向後的移動向量長度
-      let len = Math.hypot(caterpillar.vx, caterpillar.vy);
-      if (len > 0) {
-        caterpillar.vx = (caterpillar.vx / len) * caterpillar.speed;
-        caterpillar.vy = (caterpillar.vy / len) * caterpillar.speed;
-
-        // 更新面朝角度（與虛擬搖桿一致）
-        caterpillar.facingAngle = Math.atan2(caterpillar.vy, caterpillar.vx);
+          // 更新面朝角度（與虛擬搖桿一致）
+          caterpillar.facingAngle = Math.atan2(caterpillar.vy, caterpillar.vx);
+        }
       }
 
       // 根據 vx/vy 移動（不論來源是鍵盤或搖桿）
