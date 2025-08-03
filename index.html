@@ -111,6 +111,9 @@
   <script>
     const canvas = document.getElementById("game-canvas");
     const ctx = canvas.getContext("2d");
+    const caterpillarImg = new Image();
+    caterpillarImg.src = 'https://raw.githubusercontent.com/BonBonChou/Butterfly_Journey/main/images/caterpillar.png'; // 確保你的圖片放在正確的資料夾中
+
 
     const energyBar = document.getElementById("energy-fill");
     const healthBar = document.getElementById("health-fill");
@@ -125,7 +128,7 @@
     const caterpillar = {
       x: game.width / 2,
       y: game.height / 2,
-      radius: 15,
+      radius: 30,
       speed: 2,
       energy: 100,
       health: 3,
@@ -170,10 +173,17 @@
       ctx.clearRect(0, 0, game.width, game.height);
 
       // 畫毛毛蟲
-      ctx.beginPath();
-      ctx.arc(caterpillar.x, caterpillar.y, caterpillar.radius, 0, Math.PI * 2);
-      ctx.fillStyle = "#00ff00";
-      ctx.fill();
+      if (caterpillarImg.complete) {
+        const size = caterpillar.radius * 2;
+        ctx.drawImage(caterpillarImg, caterpillar.x - caterpillar.radius, caterpillar.y - caterpillar.radius, size, size);
+      } else {
+        // 如果圖片尚未載入，先用圓形代替
+        ctx.beginPath();
+        ctx.arc(caterpillar.x, caterpillar.y, caterpillar.radius, 0, Math.PI * 2);
+        ctx.fillStyle = "#00ff00";
+        ctx.fill();
+      }
+
     }
 
     function drawUI() {
