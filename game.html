@@ -18,7 +18,7 @@
       position: relative;
       width: 100vw;
       height: 100vh;
-      background-color: rgba(0, 0, 0, 0.8);
+      background-color: transparent;//rgba(0, 0, 0, 0.8);
       touch-action: none;
     }
 
@@ -26,8 +26,8 @@
     #game-canvas {
       display: block;
       width: 100%;
-      height: 87%;
-      background-color: transparent;
+      height: 100%;
+      //background-color: transparent;
     }
 
     /* 虛擬搖桿區 */
@@ -114,7 +114,9 @@
     const canvas = document.getElementById("game-canvas");
     const ctx = canvas.getContext("2d");
     const caterpillarImg = new Image();
-    caterpillarImg.src = 'https://raw.githubusercontent.com/BonBonChou/Butterfly_Journey/main/images/caterpillar.png'; // 確保你的圖片放在正確的資料夾中
+    caterpillarImg.src = 'https://raw.githubusercontent.com/BonBonChou/Butterfly_Journey/main/images/caterpillar.png';
+    const grassImg = new Image();
+    grassImg.src = 'https://raw.githubusercontent.com/BonBonChou/Butterfly_Journey/main/images/bg.png'; // 你的草地圖
 
     const energyBar = document.getElementById("energy-fill");
     const healthBar = document.getElementById("health-fill");
@@ -128,8 +130,8 @@
 
     // === 主角毛毛蟲 ===
     const caterpillar = {
-      x: game.width / 2,
-      y: game.height / 2,
+      worldX: 0, // 以世界為基準的座標
+      worldY: 0,
       radius: 30,
       speed: 2,
       energy: 100,
@@ -137,6 +139,10 @@
       vx: 0,
       vy: 0,
       facingAngle: Math.PI / 2,
+    };
+    const camera = { // 相機偏移計算
+      x: 0,
+      y: 0
     };
 
     // ======================== 鍵盤控制 =================================================================
@@ -169,12 +175,12 @@
       }
 
       // 位置更新（無論是哪個控制方式）
-      caterpillar.x += caterpillar.vx;
-      caterpillar.y += caterpillar.vy;
+      caterpillar.worldX += caterpillar.vx;
+      caterpillar.worldY += caterpillar.vy;
 
-      // 邊界限制
-      caterpillar.x = Math.max(caterpillar.radius, Math.min(game.width - caterpillar.radius, caterpillar.x));
-      caterpillar.y = Math.max(caterpillar.radius, Math.min(game.height - caterpillar.radius, caterpillar.y));
+      // 讓相機中心對準角色
+      camera.x = caterpillar.worldX - game.width / 2;
+      camera.y = caterpillar.worldY - game.height / 2;
     }
 
 
@@ -182,6 +188,7 @@
     function draw() {
       // 清除畫面
       ctx.clearRect(0, 0, game.width, game.height);
+      drawBackground();
 
       // === 畫毛毛蟲 ===
       if (caterpillarImg.complete) {
@@ -196,8 +203,15 @@
         }
 
         ctx.save();
-        ctx.translate(caterpillar.x, caterpillar.y);
+        ctx.translate(game.width / 2, game.height / 2); // 固定畫在螢幕中心
         ctx.rotate((caterpillar.facingAngle || 0) + Math.PI / 2);
+        // 設定陰影來模擬外框
+        ctx.shadowColor = 'black';
+        ctx.shadowBlur = 5; // 模糊值，越小描邊越銳利；越大越柔和。
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+
+        // 畫毛毛蟲圖片（陰影會圍繞透明部分）
         ctx.drawImage(
           caterpillarImg,
           -caterpillar.radius,
@@ -214,6 +228,17 @@
         ctx.fill();
       }
     }
+
+    function drawBackground() {
+      const pattern = ctx.createPattern(grassImg, 'repeat');
+      ctx.save();
+      ctx.globalAlpha = 0.75; // 透明度（0=完全透明，1=不透明）
+      ctx.translate(-camera.x % grassImg.width, -camera.y % grassImg.height);
+      ctx.fillStyle = pattern;
+      ctx.fillRect(-grassImg.width, -grassImg.height, game.width + grassImg.width * 2, game.height + grassImg.height * 2);
+      ctx.restore();
+    }
+
 
     function drawUI() {
       // 更新能量條與血條
