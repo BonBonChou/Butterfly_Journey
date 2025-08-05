@@ -354,11 +354,9 @@
       // 修正 y 軸比例，讓方向向量在不同畫面比例下仍對稱
       const len = Math.hypot(dx, dy * scaleY);
       if (len > 0) {
-        const normX = dx / len;
-        const normY = dy / len / scaleY;
-
-        caterpillar.vx = normX * caterpillar.speed;
-        caterpillar.vy = normY * caterpillar.speed;
+        // 直接用 dx 和 dy 來計算速度，len 會負責將其標準化
+        caterpillar.vx = (dx / len) * caterpillar.speed;
+        caterpillar.vy = (dy / len) * caterpillar.speed;
       }
     });
 
