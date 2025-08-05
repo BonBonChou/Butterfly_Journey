@@ -302,23 +302,24 @@
     window.addEventListener("touchmove", (e) => {
       if (!dragging) return;
       const touch = e.touches[0];
-      
       const rect = canvas.getBoundingClientRect();
 
-      // 轉換成 canvas 內的相對距離（0 ~ 實際繪圖單位）
       const dx = (touch.clientX - joyStart.x) * (canvas.width / rect.width);
       const dy = (touch.clientY - joyStart.y) * (canvas.height / rect.height);
-      
-      const scaleY = canvas.width / canvas.height; // 用比例修正
-      const len = Math.hypot(dx, dy * scaleY);
 
+      const scaleY = canvas.width / canvas.height;
+
+      // 修正 y 軸比例，讓方向向量在不同畫面比例下仍對稱
+      const len = Math.hypot(dx, dy * scaleY);
       if (len > 0) {
         const normX = dx / len;
-        const normY = dy / len;
+        const normY = dy / len / scaleY; // 注意這裡要還原 y 軸縮放
+
         caterpillar.vx = normX * caterpillar.speed;
         caterpillar.vy = normY * caterpillar.speed;
       }
     });
+
 
     window.addEventListener("touchend", () => {
       dragging = false;
