@@ -166,7 +166,9 @@
         if (keys["a"]) caterpillar.vx -= 1;
         if (keys["d"]) caterpillar.vx += 1;
 
-        let len = Math.hypot(caterpillar.vx, caterpillar.vy);
+        // 用畫布的比例來修正
+        const scaleY = canvas.width / canvas.height;
+        let len = Math.hypot(caterpillar.vx, caterpillar.vy * scaleY);
         if (len > 0) {
           caterpillar.vx = (caterpillar.vx / len) * caterpillar.speed;
           caterpillar.vy = (caterpillar.vy / len) * caterpillar.speed;
@@ -232,7 +234,7 @@
     function drawBackground() {
       const pattern = ctx.createPattern(grassImg, 'repeat');
       ctx.save();
-      ctx.globalAlpha = 0.75; // 透明度（0=完全透明，1=不透明）
+      ctx.globalAlpha = 0.95; // 透明度（0=完全透明，1=不透明）
       ctx.translate(-camera.x % grassImg.width, -camera.y % grassImg.height);
       ctx.fillStyle = pattern;
       ctx.fillRect(-grassImg.width, -grassImg.height, game.width + grassImg.width * 2, game.height + grassImg.height * 2);
@@ -302,7 +304,9 @@
       const touch = e.touches[0];
       const dx = touch.clientX - joyStart.x;
       const dy = touch.clientY - joyStart.y;
-      const len = Math.sqrt(dx * dx + dy * dy);
+      
+      const scaleY = canvas.width / canvas.height; // 用比例修正
+      const len = Math.hypot(dx, dy * scaleY);
 
       if (len > 0) {
         const normX = dx / len;
