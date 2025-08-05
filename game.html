@@ -302,8 +302,12 @@
     window.addEventListener("touchmove", (e) => {
       if (!dragging) return;
       const touch = e.touches[0];
-      const dx = touch.clientX - joyStart.x;
-      const dy = touch.clientY - joyStart.y;
+      
+      const rect = canvas.getBoundingClientRect();
+
+      // 轉換成 canvas 內的相對距離（0 ~ 實際繪圖單位）
+      const dx = (touch.clientX - joyStart.x) * (canvas.width / rect.width);
+      const dy = (touch.clientY - joyStart.y) * (canvas.height / rect.height);
       
       const scaleY = canvas.width / canvas.height; // 用比例修正
       const len = Math.hypot(dx, dy * scaleY);
