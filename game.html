@@ -128,7 +128,7 @@
       running: true,
     };
 
-    // === 主角毛毛蟲 ===
+    // ============= 主角毛毛蟲 ===============================
     const caterpillar = {
       worldX: 0, // 以世界為基準的座標
       worldY: 0,
@@ -140,59 +140,7 @@
       vy: 0,
       facingAngle: Math.PI / 2,
     };
-    const camera = { // 相機偏移計算
-      x: 0,
-      y: 0
-    };
-
-    // ======================== 鍵盤控制 =================================================================
-    const keys = {};
-    document.addEventListener("keydown", (e) => {
-      keys[e.key.toLowerCase()] = true;
-      isUsingJoystick = false;
-    });
-    document.addEventListener("keyup", (e) => {
-      keys[e.key.toLowerCase()] = false;
-    });
-
-    function update() {
-      if (!isUsingJoystick) {
-        // 鍵盤控制時，重設速度
-        caterpillar.vx = 0;
-        caterpillar.vy = 0;
-
-        if (keys["w"]) caterpillar.vy -= 1;
-        if (keys["s"]) caterpillar.vy += 1;
-        if (keys["a"]) caterpillar.vx -= 1;
-        if (keys["d"]) caterpillar.vx += 1;
-
-        // 用畫布的比例來修正
-        const scaleY = canvas.width / canvas.height;
-        let len = Math.hypot(caterpillar.vx, caterpillar.vy * scaleY);
-        if (len > 0) {
-          caterpillar.vx = (caterpillar.vx / len) * caterpillar.speed;
-          caterpillar.vy = (caterpillar.vy / len) * caterpillar.speed;
-          caterpillar.facingAngle = Math.atan2(caterpillar.vy, caterpillar.vx);
-        }
-      }
-
-      // 位置更新（無論是哪個控制方式）
-      caterpillar.worldX += caterpillar.vx;
-      caterpillar.worldY += caterpillar.vy;
-
-      // 讓相機中心對準角色
-      camera.x = caterpillar.worldX - game.width / 2;
-      camera.y = caterpillar.worldY - game.height / 2;
-    }
-
-
-
-    function draw() {
-      // 清除畫面
-      ctx.clearRect(0, 0, game.width, game.height);
-      drawBackground();
-
-      // === 畫毛毛蟲 ===
+    function drawPlayer() { // === 畫毛毛蟲 ===
       if (caterpillarImg.complete) {
         const size = caterpillar.radius * 2;
 
@@ -209,7 +157,7 @@
         ctx.rotate((caterpillar.facingAngle || 0) + Math.PI / 2);
         // 設定陰影來模擬外框
         ctx.shadowColor = 'black';
-        ctx.shadowBlur = 5; // 模糊值，越小描邊越銳利；越大越柔和。
+        ctx.shadowBlur = 20; // 模糊值，越小描邊越銳利；越大越柔和。
         ctx.shadowOffsetX = 0;
         ctx.shadowOffsetY = 0;
 
@@ -231,10 +179,105 @@
       }
     }
 
+    const camera = { // 相機偏移計算
+      x: 0,
+      y: 0
+    };
+
+    // ======================== 鍵盤控制 =================================================================
+    const keys = {};
+    document.addEventListener("keydown", (e) => {
+      keys[e.key.toLowerCase()] = true;
+      isUsingJoystick = false;
+    });
+    document.addEventListener("keyup", (e) => {
+      keys[e.key.toLowerCase()] = false;
+    });
+    // ---------------------乳草-------------------------------------
+    const milkweeds = [];
+    const milkweedImg = new Image();
+    milkweedImg.src = 'https://raw.githubusercontent.com/BonBonChou/Butterfly_Journey/main/images/milkweed.png';
+    function spawnMilkweed() {
+      const spawnX = caterpillar.worldX + (Math.random() - 0.5) * 800;
+      const spawnY = caterpillar.worldY + (Math.random() - 0.5) * 800;
+
+      milkweeds.push({
+        x: spawnX,
+        y: spawnY,
+        spawnTime: Date.now(),
+        lifespan: 5000 // 5秒後消失
+      });
+    }
+    function updateMilkweeds() {
+      const now = Date.now();
+      for (let i = milkweeds.length - 1; i >= 0; i--) {
+        if (now - milkweeds[i].spawnTime > milkweeds[i].lifespan) {
+          milkweeds.splice(i, 1); // 移除過期乳草
+        }
+      }
+    }
+    function drawMilkweeds() {
+      milkweeds.forEach(m => {
+        const screenX = m.x - camera.x;
+        const screenY = m.y - camera.y;
+        ctx.save();
+
+        // 設定陰影來模擬外框
+        ctx.shadowColor = 'black';
+        ctx.shadowBlur = 20; // 模糊值
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+
+        // 繪製乳草
+        ctx.drawImage(milkweedImg, screenX - 20, screenY - 20, 40, 40);
+
+        ctx.restore();
+      });
+    }
+
+    function update() {
+      if (!isUsingJoystick) {
+        // 鍵盤控制時，重設速度
+        caterpillar.vx = 0;
+        caterpillar.vy = 0;
+
+        if (keys["w"]) caterpillar.vy -= 1;
+        if (keys["s"]) caterpillar.vy += 1;
+        if (keys["a"]) caterpillar.vx -= 1;
+        if (keys["d"]) caterpillar.vx += 1;
+
+        // 用畫布的比例來修正
+        const scaleY = canvas.width / canvas.height;
+        let len = Math.hypot(caterpillar.vx, caterpillar.vy * scaleY);
+        if (len > 0) {
+          caterpillar.vx = (caterpillar.vx / len) * caterpillar.speed;
+          caterpillar.vy = (caterpillar.vy / len) * caterpillar.speed;
+          caterpillar.facingAngle = Math.atan2(caterpillar.vy, caterpillar.vx);
+        }
+      }
+      updateMilkweeds();
+
+      // 位置更新（無論是哪個控制方式）
+      caterpillar.worldX += caterpillar.vx;
+      caterpillar.worldY += caterpillar.vy;
+
+      // 讓相機中心對準角色
+      camera.x = caterpillar.worldX - game.width / 2;
+      camera.y = caterpillar.worldY - game.height / 2;
+    }
+
+    function draw() {
+      // 清除畫面
+      ctx.clearRect(0, 0, game.width, game.height);
+      drawBackground();
+      drawMilkweeds();
+      drawPlayer();
+    }
+
     function drawBackground() {
       const pattern = ctx.createPattern(grassImg, 'repeat');
       ctx.save();
-      ctx.globalAlpha = 0.95; // 透明度（0=完全透明，1=不透明）
+      ctx.globalAlpha = 0.8; // 透明度（0=完全透明，1=不透明）
       ctx.translate(-camera.x % grassImg.width, -camera.y % grassImg.height);
       ctx.fillStyle = pattern;
       ctx.fillRect(-grassImg.width, -grassImg.height, game.width + grassImg.width * 2, game.height + grassImg.height * 2);
@@ -302,10 +345,9 @@
     window.addEventListener("touchmove", (e) => {
       if (!dragging) return;
       const touch = e.touches[0];
-      const rect = canvas.getBoundingClientRect();
 
-      const dx = (touch.clientX - joyStart.x) * (canvas.width / rect.width);
-      const dy = (touch.clientY - joyStart.y) * (canvas.height / rect.height);
+      const dx = touch.clientX - joyStart.x;
+      const dy = touch.clientY - joyStart.y;
 
       const scaleY = canvas.width / canvas.height;
 
@@ -313,12 +355,13 @@
       const len = Math.hypot(dx, dy * scaleY);
       if (len > 0) {
         const normX = dx / len;
-        const normY = dy / len / scaleY; // 注意這裡要還原 y 軸縮放
+        const normY = dy / len / scaleY;
 
         caterpillar.vx = normX * caterpillar.speed;
         caterpillar.vy = normY * caterpillar.speed;
       }
     });
+
 
 
     window.addEventListener("touchend", () => {
@@ -329,6 +372,12 @@
 
     // 啟動遊戲
     gameLoop();
+
+    setInterval(() => {
+      if (game.running) {
+        spawnMilkweed();
+      }
+    }, 2000); // 每 2 秒生成一次
 
   </script>
 </body>
