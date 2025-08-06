@@ -91,6 +91,9 @@
       vx: 0,
       vy: 0,
       facingAngle: Math.PI / 2,
+      level: 1,
+      exp: 0,
+      expToNext: 30,
     };
     function drawPlayer() { // === 畫毛毛蟲 ===
       if (caterpillarImg.complete) {
@@ -187,24 +190,18 @@
       });
     }
     // ------------------------EXP系統、生命、能量----------------------------------------
-    const playerStats = {
-      level: 1,
-      exp: 0,
-      expToNext: 50
-    };
-
     function gainExp(amount) {
-      playerStats.exp += amount;
-      if (playerStats.exp >= playerStats.expToNext) {
-        playerStats.exp -= playerStats.expToNext;
-        playerStats.level++;
-        playerStats.expToNext = Math.floor(playerStats.expToNext * 1.2);
+      caterpillar.exp += amount;
+      if (caterpillar.exp >= caterpillar.expToNext) {
+        caterpillar.exp -= caterpillar.expToNext;
+        caterpillar.level++;
+        caterpillar.expToNext = Math.floor(caterpillar.expToNext * 1.2);
         triggerLevelUpEvent();
       }
     }
 
     function triggerLevelUpEvent() {
-      console.log(`等級提升至 ${playerStats.level}！觸發事件！`);
+      // console.log(`等級提升至 ${caterpillar.level}！觸發事件！`);
       // TODO: 之後你可以在這裡加上升級特效或事件
     }
 
@@ -236,13 +233,13 @@
       ctx.fillStyle = "#222";
       ctx.fillRect((game.width - barWidth) / 2, marginTop, barWidth, barHeight);
       ctx.fillStyle = "#88ff88";
-      ctx.fillRect((game.width - barWidth) / 2, marginTop, barWidth * (playerStats.exp / playerStats.expToNext), barHeight);
+      ctx.fillRect((game.width - barWidth) / 2, marginTop, barWidth * (caterpillar.exp / caterpillar.expToNext), barHeight);
 
       // 畫等級文字
       ctx.fillStyle = "white";
       ctx.font = "bold 30px Times New Roman";
       ctx.textAlign = "center";
-      ctx.fillText(`LV. ${playerStats.level}`, game.width / 2, marginTop + barHeight - 2);
+      ctx.fillText(`LV. ${caterpillar.level}`, game.width / 2, marginTop + barHeight - 2);
     }
 
     //--------------更新畫面-----------------------------------
@@ -275,6 +272,24 @@
       // 讓相機中心對準角色
       camera.x = caterpillar.worldX - game.width / 2;
       camera.y = caterpillar.worldY - game.height / 2;
+
+      // === 檢查毛毛蟲與乳草碰撞 ===
+      for (let i = milkweeds.length - 1; i >= 0; i--) {
+        const dx = caterpillar.worldX - milkweeds[i].x;
+        const dy = caterpillar.worldY - milkweeds[i].y;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist < caterpillar.radius + 20) { // 20 是乳草半徑
+          // 能量回復（上限 100）
+          caterpillar.energy = Math.min(100, caterpillar.energy + 10);
+
+          // 經驗值增加（用你現有的系統）
+          gainExp(5); // 每顆乳草給 5 點經驗
+
+          // 移除乳草
+          milkweeds.splice(i, 1);
+        }
+      }
     }
 
     function draw() {
