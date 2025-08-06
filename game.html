@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
@@ -53,44 +53,6 @@
       border-radius: 50%;
       position: relative;
     }
-
-    /* UI 區域 */
-    #ui {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      z-index: 10;
-    }
-
-    /* 能量條與生命條樣式 */
-    .bar-wrapper {
-      margin-bottom: 10px;
-    }
-
-    .bar {
-      width: 200px;
-      height: 20px;
-      background-color: #555;
-      border-radius: 10px;
-      overflow: hidden;
-      margin-top: 2px;
-    }
-
-    .fill {
-      height: 100%;
-      width: 100%;
-      transition: width 0.2s linear;
-      border-radius: 10px;
-    }
-
-    .energy-bar .fill {
-      background-color: #33cfff;
-    }
-
-    .health-bar .fill {
-      background-color: #ff4e4e;
-    }
-
   </style>
 </head>
 <body>
@@ -98,16 +60,6 @@
     <canvas id="game-canvas" width="800" height="600"></canvas>
     <div id="joystick-container">
       <div id="joystick"></div>
-    </div>
-    <div id="ui">
-      <div class="bar-wrapper">
-        <label>能量</label>
-        <div class="bar energy-bar"><div class="fill" id="energy-fill"></div></div>
-      </div>
-      <div class="bar-wrapper">
-        <label>生命</label>
-        <div class="bar health-bar"><div class="fill" id="health-fill"></div></div>
-      </div>
     </div>
   </div>
   <script>
@@ -205,7 +157,7 @@
         x: spawnX,
         y: spawnY,
         spawnTime: Date.now(),
-        lifespan: 5000 // 5秒後消失
+        lifespan: 10000 // 10 秒後消失
       });
     }
     function updateMilkweeds() {
@@ -234,7 +186,66 @@
         ctx.restore();
       });
     }
+    // ------------------------EXP系統、生命、能量----------------------------------------
+    const playerStats = {
+      level: 1,
+      exp: 0,
+      expToNext: 50
+    };
 
+    function gainExp(amount) {
+      playerStats.exp += amount;
+      if (playerStats.exp >= playerStats.expToNext) {
+        playerStats.exp -= playerStats.expToNext;
+        playerStats.level++;
+        playerStats.expToNext = Math.floor(playerStats.expToNext * 1.2);
+        triggerLevelUpEvent();
+      }
+    }
+
+    function triggerLevelUpEvent() {
+      console.log(`等級提升至 ${playerStats.level}！觸發事件！`);
+      // TODO: 之後你可以在這裡加上升級特效或事件
+    }
+
+    function drawPlayerBars() {
+      const barWidth = 60;
+      const barHeight = 6;
+      const screenX = game.width / 2;
+      const screenY = game.height / 2 + caterpillar.radius + 8;
+
+      // 生命條（紅色）
+      ctx.fillStyle = "#555";
+      ctx.fillRect(screenX - barWidth / 2, screenY, barWidth, barHeight);
+      ctx.fillStyle = "#ff4e4e";
+      ctx.fillRect(screenX - barWidth / 2, screenY, barWidth * (caterpillar.health / 3), barHeight);
+
+      // 能量條（藍色）
+      const energyY = screenY + barHeight + 4;
+      ctx.fillStyle = "#555";
+      ctx.fillRect(screenX - barWidth / 2, energyY, barWidth, barHeight);
+      ctx.fillStyle = "#33cfff";
+      ctx.fillRect(screenX - barWidth / 2, energyY, barWidth * (caterpillar.energy / 100), barHeight);
+    }
+
+    function drawExpBar() {
+      const barWidth = 700;
+      const barHeight = 25;
+      const marginTop = 10;
+
+      ctx.fillStyle = "#222";
+      ctx.fillRect((game.width - barWidth) / 2, marginTop, barWidth, barHeight);
+      ctx.fillStyle = "#88ff88";
+      ctx.fillRect((game.width - barWidth) / 2, marginTop, barWidth * (playerStats.exp / playerStats.expToNext), barHeight);
+
+      // 畫等級文字
+      ctx.fillStyle = "white";
+      ctx.font = "bold 30px Times New Roman";
+      ctx.textAlign = "center";
+      ctx.fillText(`LV. ${playerStats.level}`, game.width / 2, marginTop + barHeight - 2);
+    }
+
+    //--------------更新畫面-----------------------------------
     function update() {
       if (!isUsingJoystick) {
         // 鍵盤控制時，重設速度
@@ -272,6 +283,8 @@
       drawBackground();
       drawMilkweeds();
       drawPlayer();
+      drawPlayerBars();
+      drawExpBar();
     }
 
     function drawBackground() {
@@ -284,13 +297,6 @@
       ctx.restore();
     }
 
-
-    function drawUI() {
-      // 更新能量條與血條
-      energyBar.style.width = `${caterpillar.energy}%`;
-      healthBar.style.width = `${(caterpillar.health / 3) * 100}%`;
-    }
-
     function gameOver() {
       game.running = false;
       location.href="https://bonbonchou.github.io/Butterfly_Journey/fail_ending.html";
@@ -300,7 +306,6 @@
       if (!game.running) return;
       update();
       draw();
-      drawUI();
       requestAnimationFrame(gameLoop);
     }
 
@@ -325,7 +330,6 @@
       joystickContainer.style.display = "flex";
       joystickContainer.style.left = `${x - 50}px`; // 中心對齊
       joystickContainer.style.top = `${y - 50}px`;
-      joyStart = { x, y };
     }
 
     // 隱藏搖桿
@@ -335,28 +339,48 @@
       caterpillar.vy = 0;
     }
 
+    // 將螢幕座標轉換為 Canvas 內部座標
+    function getCanvasCoordinates(touchEvent) {
+        const rect = canvas.getBoundingClientRect(); // 獲取畫布在螢幕上的實際位置和大小
+        const touch = touchEvent.touches[0];
+
+        // 計算縮放比例
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+
+        // 進行座標轉換
+        const canvasX = (touch.clientX - rect.left) * scaleX;
+        const canvasY = (touch.clientY - rect.top) * scaleY;
+
+        return { x: canvasX, y: canvasY };
+    }
+
     window.addEventListener("touchstart", (e) => {
       const touch = e.touches[0];
-      showJoystick(touch.clientX, touch.clientY);
+      // 視覺上的搖桿依然使用螢幕座標，才能正確顯示在手指下方
+      showJoystick(touch.clientX, touch.clientY); 
+      
+      // 但我們的遊戲邏輯，使用轉換後的畫布座標
+      const coords = getCanvasCoordinates(e);
+      joyStart = { x: coords.x, y: coords.y };
       dragging = true;
       isUsingJoystick = true; // 代表當前由搖桿控制
     });
 
     window.addEventListener("touchmove", (e) => {
       if (!dragging) return;
-      const touch = e.touches[0];
+      // 同樣，將當前手指位置也轉換為畫布座標
+      const coords = getCanvasCoordinates(e);
 
-      const dx = touch.clientX - joyStart.x;
-      const dy = touch.clientY - joyStart.y;
+      // dx 和 dy 現在是基於 800x600 畫布的正確向量
+      const dx = coords.x - joyStart.x;
+      const dy = coords.y - joyStart.y;
 
-      const scaleY = canvas.width / canvas.height;
-
-      // 修正 y 軸比例，讓方向向量在不同畫面比例下仍對稱
-      const len = Math.hypot(dx, dy * scaleY);
+      const len = Math.hypot(dx, dy); // 因為座標已經被校正，不再需要手動乘以 scaleY
       if (len > 0) {
         // 直接用 dx 和 dy 來計算速度，len 會負責將其標準化
-        caterpillar.vx = (dx / len) * caterpillar.speed;
-        caterpillar.vy = (dy / len) * caterpillar.speed;
+        caterpillar.vx = 1.5 * (dx / len) * caterpillar.speed;
+        caterpillar.vy = 1.5 *(dy / len) * caterpillar.speed;
       }
     });
 
