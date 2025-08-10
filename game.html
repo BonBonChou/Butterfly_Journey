@@ -1,4 +1,4 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
@@ -23,12 +23,17 @@
     }
 
     /* 遊戲畫布 */
-    #game-canvas {
-      display: block;
+    canvas {
+      position: absolute;     /* 把兩張 canvas 疊在容器裡 */
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
-      //background-color: transparent;
+      display: block;
     }
+    #game-canvas { z-index: 0; }
+    #mask-canvas { z-index: 10; pointer-events: none; }
+    #ui-canvas   { z-index: 20; pointer-events: none; }
 
     /* 虛擬搖桿區 */
     #joystick-container {
@@ -58,6 +63,8 @@
 <body>
   <div id="game-container">
     <canvas id="game-canvas" width="800" height="600"></canvas>
+    <canvas id="mask-canvas" width="800" height="600"></canvas> <!-- 上層畫黑色遮罩 -->
+    <canvas id="ui-canvas" width="800" height="600"></canvas>   <!-- UI & 毛毛蟲 -->
     <div id="joystick-container">
       <div id="joystick"></div>
     </div>
@@ -65,6 +72,12 @@
   <script>
     const canvas = document.getElementById("game-canvas");
     const ctx = canvas.getContext("2d");
+    const maskCanvas = document.getElementById("mask-canvas");
+    const maskCtx = maskCanvas.getContext("2d");
+    const uiCanvas = document.getElementById("ui-canvas");
+    const uiCtx = uiCanvas.getContext("2d");
+    let isButterfly = false;  // 預設是毛毛蟲狀態，有視野限制
+
     const caterpillarImg = new Image();
     caterpillarImg.src = 'https://raw.githubusercontent.com/BonBonChou/Butterfly_Journey/main/images/caterpillar.png';
     const grassImg = new Image();
@@ -96,6 +109,7 @@
       expToNext: 30,
     };
     function drawPlayer() { // === 畫毛毛蟲 ===
+      uiCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height); // 每次清掉舊的遮罩
       if (caterpillarImg.complete) {
         const size = caterpillar.radius * 2;
 
@@ -107,30 +121,30 @@
           caterpillar.facingAngle = angle;
         }
 
-        ctx.save();
-        ctx.translate(game.width / 2, game.height / 2); // 固定畫在螢幕中心
-        ctx.rotate((caterpillar.facingAngle || 0) + Math.PI / 2);
+        uiCtx.save();
+        uiCtx.translate(game.width / 2, game.height / 2); // 固定畫在螢幕中心
+        uiCtx.rotate((caterpillar.facingAngle || 0) + Math.PI / 2);
         // 設定陰影來模擬外框
-        ctx.shadowColor = 'black';
-        ctx.shadowBlur = 20; // 模糊值，越小描邊越銳利；越大越柔和。
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
+        uiCtx.shadowColor = 'black';
+        uiCtx.shadowBlur = 20; // 模糊值，越小描邊越銳利；越大越柔和。
+        uiCtx.shadowOffsetX = 0;
+        uiCtx.shadowOffsetY = 0;
 
         // 畫毛毛蟲圖片（陰影會圍繞透明部分）
-        ctx.drawImage(
+        uiCtx.drawImage(
           caterpillarImg,
           -caterpillar.radius,
           -caterpillar.radius,
           size,
           size
         );
-        ctx.restore();
+        uiCtx.restore();
       } else {
         // 圖片未載入時用圓形
-        ctx.beginPath();
-        ctx.arc(caterpillar.x, caterpillar.y, caterpillar.radius, 0, Math.PI * 2);
-        ctx.fillStyle = "#00ff00";
-        ctx.fill();
+        uiCtx.beginPath();
+        uiCtx.arc(caterpillar.x, caterpillar.y, caterpillar.radius, 0, Math.PI * 2);
+        uiCtx.fillStyle = "#00ff00";
+        uiCtx.fill();
       }
     }
 
@@ -138,6 +152,41 @@
       x: 0,
       y: 0
     };
+
+    // 毛毛蟲視野設定
+    const caterpillarVision = {
+      angle: Math.PI / 3, // 60 度視野
+      range: 200 // 視野距離
+      //caterpillarVision.range *= 1.5;  // 視野距離增加 50%
+      //caterpillarVision.angle *= 1.2;  // 視野角度增加 20%
+    };
+
+    // 畫黑色遮罩並挖出視野
+    function drawVisionMask() {
+      if (isButterfly) return;  // 是蝴蝶就不畫遮罩
+      maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height); // 每次清掉舊的遮罩
+
+      // Step 1: 黑色遮罩
+      maskCtx.fillStyle = "rgba(0, 0, 0, 0.95)";
+      maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+
+      // Step 2: 挖出視野
+      maskCtx.globalCompositeOperation = "destination-out";
+      maskCtx.beginPath();
+      maskCtx.moveTo(game.width / 2, game.height / 2);
+      maskCtx.arc(
+        game.width / 2,
+        game.height / 2,
+        caterpillarVision.range,
+        caterpillar.facingAngle - caterpillarVision.angle / 2,
+        caterpillar.facingAngle + caterpillarVision.angle / 2
+      );
+      maskCtx.closePath();
+      maskCtx.fill();
+
+      maskCtx.globalCompositeOperation = "source-over"; // 還原混合模式
+    }
+
 
     // ======================== 鍵盤控制 =================================================================
     const keys = {};
@@ -212,17 +261,17 @@
       const screenY = game.height / 2 + caterpillar.radius + 8;
 
       // 生命條（紅色）
-      ctx.fillStyle = "#555";
-      ctx.fillRect(screenX - barWidth / 2, screenY, barWidth, barHeight);
-      ctx.fillStyle = "#ff4e4e";
-      ctx.fillRect(screenX - barWidth / 2, screenY, barWidth * (caterpillar.health / 3), barHeight);
+      uiCtx.fillStyle = "#555";
+      uiCtx.fillRect(screenX - barWidth / 2, screenY, barWidth, barHeight);
+      uiCtx.fillStyle = "#ff4e4e";
+      uiCtx.fillRect(screenX - barWidth / 2, screenY, barWidth * (caterpillar.health / 3), barHeight);
 
       // 能量條（藍色）
       const energyY = screenY + barHeight + 4;
-      ctx.fillStyle = "#555";
-      ctx.fillRect(screenX - barWidth / 2, energyY, barWidth, barHeight);
-      ctx.fillStyle = "#33cfff";
-      ctx.fillRect(screenX - barWidth / 2, energyY, barWidth * (caterpillar.energy / 100), barHeight);
+      uiCtx.fillStyle = "#555";
+      uiCtx.fillRect(screenX - barWidth / 2, energyY, barWidth, barHeight);
+      uiCtx.fillStyle = "#33cfff";
+      uiCtx.fillRect(screenX - barWidth / 2, energyY, barWidth * (caterpillar.energy / 100), barHeight);
     }
 
     function drawExpBar() {
@@ -230,16 +279,16 @@
       const barHeight = 25;
       const marginTop = 10;
 
-      ctx.fillStyle = "#222";
-      ctx.fillRect((game.width - barWidth) / 2, marginTop, barWidth, barHeight);
-      ctx.fillStyle = "#88ff88";
-      ctx.fillRect((game.width - barWidth) / 2, marginTop, barWidth * (caterpillar.exp / caterpillar.expToNext), barHeight);
+      uiCtx.fillStyle = "#222";
+      uiCtx.fillRect((game.width - barWidth) / 2, marginTop, barWidth, barHeight);
+      uiCtx.fillStyle = "#88ff88";
+      uiCtx.fillRect((game.width - barWidth) / 2, marginTop, barWidth * (caterpillar.exp / caterpillar.expToNext), barHeight);
 
       // 畫等級文字
-      ctx.fillStyle = "white";
-      ctx.font = "bold 30px Times New Roman";
-      ctx.textAlign = "center";
-      ctx.fillText(`LV. ${caterpillar.level}`, game.width / 2, marginTop + barHeight - 2);
+      uiCtx.fillStyle = "white";
+      uiCtx.font = "bold 30px Times New Roman";
+      uiCtx.textAlign = "center";
+      uiCtx.fillText(`LV. ${caterpillar.level}`, game.width / 2, marginTop + barHeight - 2);
     }
 
     //--------------更新畫面-----------------------------------
@@ -297,6 +346,9 @@
       ctx.clearRect(0, 0, game.width, game.height);
       drawBackground();
       drawMilkweeds();
+      // 先畫地圖與物件，再畫黑色遮罩
+      drawVisionMask();
+      // 再畫毛毛蟲、經驗條，確保它永遠可見
       drawPlayer();
       drawPlayerBars();
       drawExpBar();
