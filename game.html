@@ -100,7 +100,8 @@
       radius: 30,
       speed: 2,
       energy: 100,
-      health: 3,
+      health: 100,     // 當前血量
+      maxHealth: 100,  // 血量上限
       vx: 0,
       vy: 0,
       facingAngle: Math.PI / 2,
@@ -264,7 +265,7 @@
       uiCtx.fillStyle = "#555";
       uiCtx.fillRect(screenX - barWidth / 2, screenY, barWidth, barHeight);
       uiCtx.fillStyle = "#ff4e4e";
-      uiCtx.fillRect(screenX - barWidth / 2, screenY, barWidth * (caterpillar.health / 3), barHeight);
+      uiCtx.fillRect(screenX - barWidth / 2, screenY, barWidth * (caterpillar.health / caterpillar.maxHealth), barHeight);
 
       // 能量條（藍色）
       const energyY = screenY + barHeight + 4;
@@ -450,8 +451,6 @@
         caterpillar.vy = 1.5 *(dy / len) * caterpillar.speed;
       }
     });
-
-
 
     window.addEventListener("touchend", () => {
       dragging = false;
