@@ -161,7 +161,12 @@
       expToNext: 20,
       regenRate: 0,        // 每秒回血比例（0.01 = 1%）
       hasRegen: false,
-      energyGainMult: 1    // 吃乳草得到能量的倍率（1.0 = 原量）
+      energyGainMult: 1,    // 吃乳草得到能量的倍率（1.0 = 原量）
+      // stealth 相關欄位（新增）
+      hasStealth: false,      // 由升級啟用（你的 apply() 已會設 true）
+      isStealthed: false,     // 當前是否處於隱形狀態
+      stoppedSince: null,     // 若靜止，記錄開始靜止的時間（ms）
+      stealthAlpha: 0.45      // 隱形時畫面透明度
     };
     function drawPlayer() { // === 畫毛毛蟲 ===
       uiCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height); // 每次清掉舊的遮罩
@@ -179,6 +184,10 @@
         uiCtx.save();
         uiCtx.translate(game.width / 2, game.height / 2); // 固定畫在螢幕中心
         uiCtx.rotate((caterpillar.facingAngle || 0) + Math.PI / 2);
+
+        // 設定透明度：若隱形就使用 stealthAlpha
+        uiCtx.globalAlpha = caterpillar.isStealthed ? caterpillar.stealthAlpha : 1.0;
+
         // 設定陰影來模擬外框
         uiCtx.shadowColor = 'black';
         uiCtx.shadowBlur = 20; // 模糊值，越小描邊越銳利；越大越柔和。
@@ -193,6 +202,10 @@
           size,
           size
         );
+
+        // 恢復 alpha（非常重要）
+        uiCtx.globalAlpha = 1.0;
+
         uiCtx.restore();
       } else {
         // 圖片未載入時用圓形
@@ -294,19 +307,15 @@
       });
     }
     // ------------------------EXP系統、生命、能量----------------------------------------
-    function gainExp(amount) {
-      caterpillar.exp += amount;
+    function gainExp(baseAmount) {
+      const gain = Math.round(baseAmount * (1 + (caterpillar.expGainMult || 0)));
+      caterpillar.exp += gain;
       if (caterpillar.exp >= caterpillar.expToNext) {
         caterpillar.exp -= caterpillar.expToNext;
         caterpillar.level++;
         caterpillar.expToNext = Math.floor(caterpillar.expToNext * 1.2);
         triggerLevelUpEvent();
       }
-    }
-
-    function triggerLevelUpEvent() {
-      // console.log(`等級提升至 ${caterpillar.level}！觸發事件！`);
-      // TODO: 之後你可以在這裡加上升級特效或事件
     }
 
     function drawPlayerBars() {
@@ -404,12 +413,25 @@
         id: "energyGainUp", 
         name: "能量獲取 +20%", 
         desc: () => {
-          const cur = caterpillar.energyGainMult || 1;
-          const future = cur * 1.2;
-          return `吃乳草/花獲得的能量增加 ${Math.round((future - 1) * 100)}%`;
+          const cur = caterpillar.energyGainMult || 0; // 以加算百分比存，0 代表 +0%
+          const future = cur + 0.2; // 每次 +0.2 (=20%)
+          return `吃乳草/花獲得的能量增加 ${Math.round(future * 100)}%`;
         },
         maxPick: Infinity,
-        apply: () => { caterpillar.energyGainMult = (caterpillar.energyGainMult || 1) * 1.2; }
+        apply: () => { caterpillar.energyGainMult = (caterpillar.energyGainMult || 1) + 0.2; }
+      },
+      {
+        id: "expGainUp",
+        name: "經驗值獲取 +20%",
+        desc: () => {
+          const cur = caterpillar.expGainMult || 0; // 同樣用加算百分比存
+          const future = cur + 0.2;
+          return `獲得的經驗值增加 ${Math.round(future * 100)}%`;
+        },
+        maxPick: Infinity,
+        apply: () => {
+          caterpillar.expGainMult = (caterpillar.expGainMult || 0) + 0.2;
+        }
       },
       { 
         id: "metamorph", 
@@ -485,10 +507,23 @@
       document.getElementById("upgrade-container").style.display = "none";
       isGamePaused = false; // 恢復遊戲
     }
+    //--------------擬態----------------------------
+    function enterStealth() {
+      if (!caterpillar.hasStealth) return;
+      caterpillar.isStealthed = true;
+    }
+
+    function exitStealth() {
+      if (!caterpillar.isStealthed) return;
+      caterpillar.isStealthed = false;
+      // 重設停止計時，避免立刻再進入
+      caterpillar.stoppedSince = null;
+    }
 
     //--------------更新畫面-----------------------------------
     function update() {
       if (isGamePaused) return; // 暫停時不更新遊戲邏輯
+
       if (!isUsingJoystick) {
         // 鍵盤控制時，重設速度
         caterpillar.vx = 0;
@@ -508,6 +543,26 @@
           caterpillar.facingAngle = Math.atan2(caterpillar.vy, caterpillar.vx);
         }
       }
+      // ---------- 檢查是否開始或結束隱形 ----------
+      if (caterpillar.hasStealth) { // 如果玩家有擬態能力
+        if (caterpillar.vx === 0 && caterpillar.vy === 0) { // 如果現在完全沒移動
+          if (caterpillar.stoppedSince === null) {
+            // 剛開始靜止，記錄時間
+            caterpillar.stoppedSince = Date.now();
+          } else {
+            // 已經靜止一段時間，檢查是否達到 1000ms
+            if (!caterpillar.isStealthed && (Date.now() - caterpillar.stoppedSince >= 1000)) {
+              enterStealth();
+            }
+          }
+        } else {
+          // 有移動 -> 立即退出隱形（如果之前在隱形）
+          if (caterpillar.isStealthed) exitStealth();
+          // 也重設停止計時
+          caterpillar.stoppedSince = null;
+        }
+      }
+
       updateMilkweeds();
 
       // 位置更新（無論是哪個控制方式）
@@ -519,24 +574,28 @@
       camera.y = caterpillar.worldY - game.height / 2;
 
       // === 檢查毛毛蟲與乳草碰撞 ===
-      for (let i = milkweeds.length - 1; i >= 0; i--) {
-        const dx = caterpillar.worldX - milkweeds[i].x;
-        const dy = caterpillar.worldY - milkweeds[i].y;
-        const dist = Math.hypot(dx, dy);
+      // **重要**：如果正在隱形則跳過碰撞（穿透）
+      if (!caterpillar.isStealthed) {
+        // === 檢查毛毛蟲與乳草碰撞 ===
+        for (let i = milkweeds.length - 1; i >= 0; i--) {
+          const dx = caterpillar.worldX - milkweeds[i].x;
+          const dy = caterpillar.worldY - milkweeds[i].y;
+          const dist = Math.hypot(dx, dy);
 
-        if (dist < caterpillar.radius + 20) { // 20 是乳草半徑
-          // 能量回復（上限 100）
-          const baseGain = 10;
-          const gain = Math.round(baseGain * (caterpillar.energyGainMult || 1));
-          caterpillar.energy = Math.min(100, caterpillar.energy + gain);
+          if (dist < caterpillar.radius + 20) { // 20 是乳草半徑
+            // 能量回復（上限 100）
+            const baseGain = 10;
+            const gain = Math.round(baseGain * (1 + (caterpillar.energyGainMult || 0)));
+            caterpillar.energy = Math.min(100, caterpillar.energy + gain);
 
-          // 經驗值增加（用你現有的系統）
-          gainExp(5); // 每顆乳草給 5 點經驗
+            // 經驗值增加（用你現有的系統）
+            gainExp(5); // 每顆乳草給 5 點經驗
 
-          // 移除乳草
-          milkweeds.splice(i, 1);
+            // 移除乳草
+            milkweeds.splice(i, 1);
+          }
         }
-      }
+      } // end if not stealthed
     }
 
     function draw() {
@@ -573,30 +632,6 @@
       draw();
       requestAnimationFrame(gameLoop);
     }
-
-    // === 能量每秒自動減少 ===
-    setInterval(() => {
-      if (!game.running) return;
-      if (isGamePaused) return; // 暫停時暫停這些每秒效果
-
-      // 能量逐秒流失
-      caterpillar.energy -= 1;
-
-      // 自動回血（若有選）
-      if (caterpillar.hasRegen && (caterpillar.regenRate || 0) > 0) {
-        caterpillar.health = Math.min(caterpillar.maxHealth, caterpillar.health + (caterpillar.maxHealth * (caterpillar.regenRate || 0)));
-      }
-
-      if (caterpillar.energy <= 0) {
-        caterpillar.energy = 0;
-        gameOver();
-      }
-    }, 1000);
-    setInterval(() => {
-      if (game.running && !isGamePaused) {
-        spawnMilkweed();
-      }
-    }, 2000);
 
     // =================================== 虛擬搖桿控制 ==================================================================
     const joystickContainer = document.getElementById("joystick-container");
@@ -672,11 +707,29 @@
     // 啟動遊戲
     gameLoop();
 
+    // === 能量每秒自動減少 ===
     setInterval(() => {
-      if (game.running) {
+      if (!game.running) return;
+      if (isGamePaused) return; // 暫停時暫停這些每秒效果
+
+      // 能量逐秒流失
+      caterpillar.energy -= 1;
+
+      // 自動回血（若有選）
+      if (caterpillar.hasRegen && (caterpillar.regenRate || 0) > 0) {
+        caterpillar.health = Math.min(caterpillar.maxHealth, caterpillar.health + (caterpillar.maxHealth * (caterpillar.regenRate || 0)));
+      }
+
+      if (caterpillar.energy <= 0) {
+        caterpillar.energy = 0;
+        gameOver();
+      }
+    }, 1000);
+    setInterval(() => {
+      if (game.running && !isGamePaused) {
         spawnMilkweed();
       }
-    }, 2000); // 每 2 秒生成一次
+    }, 2000);
 
   </script>
 </body>
