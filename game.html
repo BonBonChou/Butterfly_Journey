@@ -436,7 +436,7 @@
       { 
         id: "metamorph", 
         name: "羽化祝福", 
-        desc: () => "結蛹蛻變成蝴蝶（僅 10 級可選）", 
+        desc: () => "結蛹蛻變成蝴蝶", 
         maxPick: 1,
         onlyLevel: 10,
         apply: () => { isButterfly = true; }
@@ -448,6 +448,14 @@
 
     // 升級觸發
     function triggerLevelUpEvent() {
+      if (caterpillar.level === 3) {
+        const blessing = upgrades.find(u => u.id === "metamorph");
+        if (blessing) {
+          showUpgradeChoices([blessing]); // 只顯示羽化祝福
+          return; // 結束函式
+        }
+      }
+
       const available = upgrades.filter(u => {
         const count = upgradePickCount[u.id] || 0;
         if (count >= u.maxPick) return false;
@@ -729,7 +737,7 @@
       if (game.running && !isGamePaused) {
         spawnMilkweed();
       }
-    }, 2000);
+    }, 1500);
 
   </script>
 </body>
