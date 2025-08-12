@@ -35,6 +35,41 @@
     #mask-canvas { z-index: 10; pointer-events: none; }
     #ui-canvas   { z-index: 20; pointer-events: none; }
 
+    /* 升級選項卡 */
+    #upgrade-container {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      z-index: 1000;
+    }
+    .upgrade-card {
+      background: rgba(0,0,0,0.85);
+      border: 2px solid #fff;
+      border-radius: 10px;
+      padding: 15px;
+      width: 200px;
+      color: white;
+      cursor: pointer;
+      text-align: center;
+      transition: transform 0.15s ease;
+    }
+    .upgrade-card:hover {
+      transform: scale(1.05);
+      border-color: yellow;
+    }
+    .upgrade-name {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    .upgrade-desc {
+      font-size: 14px;
+    }
+
     /* 虛擬搖桿區 */
     #joystick-container {
       position: absolute;
@@ -65,6 +100,22 @@
     <canvas id="game-canvas" width="800" height="600"></canvas>
     <canvas id="mask-canvas" width="800" height="600"></canvas> <!-- 上層畫黑色遮罩 -->
     <canvas id="ui-canvas" width="800" height="600"></canvas>   <!-- UI & 毛毛蟲 -->
+    <!-- 升級選項容器 -->
+    <div id="upgrade-container" style="display:none;">
+      <div class="upgrade-card" onclick="pickUpgradeFromUI(0)">
+        <div class="upgrade-name" id="upgrade-name-0"></div>
+        <div class="upgrade-desc" id="upgrade-desc-0"></div>
+      </div>
+      <div class="upgrade-card" onclick="pickUpgradeFromUI(1)">
+        <div class="upgrade-name" id="upgrade-name-1"></div>
+        <div class="upgrade-desc" id="upgrade-desc-1"></div>
+      </div>
+      <div class="upgrade-card" onclick="pickUpgradeFromUI(2)">
+        <div class="upgrade-name" id="upgrade-name-2"></div>
+        <div class="upgrade-desc" id="upgrade-desc-2"></div>
+      </div>
+    </div>
+    <!-- 虛擬搖桿 -->
     <div id="joystick-container">
       <div id="joystick"></div>
     </div>
@@ -107,7 +158,10 @@
       facingAngle: Math.PI / 2,
       level: 1,
       exp: 0,
-      expToNext: 30,
+      expToNext: 20,
+      regenRate: 0,        // 每秒回血比例（0.01 = 1%）
+      hasRegen: false,
+      energyGainMult: 1    // 吃乳草得到能量的倍率（1.0 = 原量）
     };
     function drawPlayer() { // === 畫毛毛蟲 ===
       uiCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height); // 每次清掉舊的遮罩
@@ -291,9 +345,150 @@
       uiCtx.textAlign = "center";
       uiCtx.fillText(`LV. ${caterpillar.level}`, game.width / 2, marginTop + barHeight - 2);
     }
+    //--------------升級--------------------------------------
+    // 升級項目資料（desc 使用 function 以便動態顯示「選取後」的數值）
+    const upgrades = [
+      { 
+        id: "stealth", 
+        name: "擬態", 
+        desc: () => "靜止 1 秒後進入隱身狀態，移動後失效。隱身時不會遭受任何傷害",
+        maxPick: 1,
+        apply: () => { caterpillar.hasStealth = true; }
+      },
+      { 
+        id: "speedUp", 
+        name: "移速增加 20%", 
+        desc: () => "速度 +20%",
+        maxPick: 3,
+        apply: () => { caterpillar.speed *= 1.2; }
+      },
+      { 
+        id: "visionRangeUp", 
+        name: "視野距離增加 20%", 
+        desc: () => `視野距離 +20%`,
+        maxPick: 3,
+        apply: () => { caterpillarVision.range *= 1.2; }
+      },
+      { 
+        id: "visionAngleUp", 
+        name: "視野角度增加 20%", 
+        desc: () => `視野角度 +20%`,
+        maxPick: 3,
+        apply: () => { caterpillarVision.angle *= 1.2; }
+      },
+      { 
+        id: "maxHpUp", 
+        name: "血量 +20", 
+        desc: () => "最大血量 +20 並回滿血",
+        maxPick: Infinity,
+        apply: () => { 
+          caterpillar.maxHealth += 20; 
+          caterpillar.health = caterpillar.maxHealth;
+        }
+      },
+      { 
+        id: "regen", 
+        name: "自動回血", 
+        desc: () => {
+          const cur = caterpillar.regenRate || 0;
+          const future = cur + 0.01; // 每次 +1%（0.01）
+          return `每秒回復 ${Math.round(future * 100)}% 最大血量`;
+        },
+        maxPick: Infinity,
+        apply: () => {
+          caterpillar.regenRate = (caterpillar.regenRate || 0) + 0.01; // +1%/次
+          caterpillar.hasRegen = true;
+        }
+      },
+      { 
+        id: "energyGainUp", 
+        name: "能量獲取 +20%", 
+        desc: () => {
+          const cur = caterpillar.energyGainMult || 1;
+          const future = cur * 1.2;
+          return `吃乳草/花獲得的能量增加 ${Math.round((future - 1) * 100)}%`;
+        },
+        maxPick: Infinity,
+        apply: () => { caterpillar.energyGainMult = (caterpillar.energyGainMult || 1) * 1.2; }
+      },
+      { 
+        id: "metamorph", 
+        name: "羽化祝福", 
+        desc: () => "結蛹蛻變成蝴蝶（僅 10 級可選）", 
+        maxPick: 1,
+        onlyLevel: 10,
+        apply: () => { isButterfly = true; }
+      }
+    ];
+
+    // 記錄升級項目已選次數
+    const upgradePickCount = {};
+
+    // 升級觸發
+    function triggerLevelUpEvent() {
+      const available = upgrades.filter(u => {
+        const count = upgradePickCount[u.id] || 0;
+        if (count >= u.maxPick) return false;
+        if (u.onlyLevel && u.onlyLevel !== caterpillar.level) return false;
+        return true;
+      });
+
+      // 隨機挑 3 個（如果不足 3 個就全給）
+      const choices = [];
+      while (choices.length < 3 && available.length > 0) {
+        const idx = Math.floor(Math.random() * available.length);
+        choices.push(available.splice(idx, 1)[0]);
+      }
+
+      showUpgradeChoices(choices);
+    }
+
+    // 套用升級效果
+    function pickUpgrade(upgrade) {
+      upgrade.apply();
+      upgradePickCount[upgrade.id] = (upgradePickCount[upgrade.id] || 0) + 1;
+    }
+    
+    let currentUpgradeChoices = [];
+    let isGamePaused = false;
+
+    function showUpgradeChoices(choices) {
+      isGamePaused = true; // 暫停遊戲
+      currentUpgradeChoices = choices;
+
+      // 顯示卡片與動態描述
+      choices.forEach((u, i) => {
+        document.getElementById(`upgrade-name-${i}`).textContent = u.name;
+        const descText = (typeof u.desc === 'function') ? u.desc() : u.desc;
+        document.getElementById(`upgrade-desc-${i}`).textContent = descText;
+        document.querySelectorAll(".upgrade-card")[i].style.display = "block";
+      });
+
+      // 如果不足3個，隱藏沒用到的卡
+      for (let i = choices.length; i < 3; i++) {
+        document.getElementById(`upgrade-name-${i}`).textContent = "";
+        document.getElementById(`upgrade-desc-${i}`).textContent = "";
+        document.querySelectorAll(".upgrade-card")[i].style.display = "none";
+      }
+
+      // 顯示容器
+      document.getElementById("upgrade-container").style.display = "flex";
+    }
+
+    function pickUpgradeFromUI(index) {
+      const upgrade = currentUpgradeChoices[index];
+      if (upgrade) {
+        pickUpgrade(upgrade);
+      }
+
+      // 關閉 UI
+      document.getElementById("upgrade-container").style.display = "none";
+      isGamePaused = false; // 恢復遊戲
+    }
 
     //--------------更新畫面-----------------------------------
     function update() {
+      if (isGamePaused) return; // 暫停時不更新遊戲邏輯
       if (!isUsingJoystick) {
         // 鍵盤控制時，重設速度
         caterpillar.vx = 0;
@@ -331,7 +526,9 @@
 
         if (dist < caterpillar.radius + 20) { // 20 是乳草半徑
           // 能量回復（上限 100）
-          caterpillar.energy = Math.min(100, caterpillar.energy + 10);
+          const baseGain = 10;
+          const gain = Math.round(baseGain * (caterpillar.energyGainMult || 1));
+          caterpillar.energy = Math.min(100, caterpillar.energy + gain);
 
           // 經驗值增加（用你現有的系統）
           gainExp(5); // 每顆乳草給 5 點經驗
@@ -380,12 +577,26 @@
     // === 能量每秒自動減少 ===
     setInterval(() => {
       if (!game.running) return;
+      if (isGamePaused) return; // 暫停時暫停這些每秒效果
+
+      // 能量逐秒流失
       caterpillar.energy -= 1;
+
+      // 自動回血（若有選）
+      if (caterpillar.hasRegen && (caterpillar.regenRate || 0) > 0) {
+        caterpillar.health = Math.min(caterpillar.maxHealth, caterpillar.health + (caterpillar.maxHealth * (caterpillar.regenRate || 0)));
+      }
+
       if (caterpillar.energy <= 0) {
         caterpillar.energy = 0;
         gameOver();
       }
     }, 1000);
+    setInterval(() => {
+      if (game.running && !isGamePaused) {
+        spawnMilkweed();
+      }
+    }, 2000);
 
     // =================================== 虛擬搖桿控制 ==================================================================
     const joystickContainer = document.getElementById("joystick-container");
