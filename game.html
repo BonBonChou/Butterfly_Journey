@@ -425,7 +425,7 @@
       { 
         id: "stealth", 
         name: "擬態", 
-        desc: () => "靜止 1 秒後進入隱身狀態，移動後失效。隱身時不會遭受任何傷害",
+        desc: () => "靜止 3 秒後進入隱身狀態，移動後失效。隱身時不會遭受任何傷害",
         maxPick: 1,
         apply: () => { caterpillar.hasStealth = true; }
       },
@@ -644,8 +644,8 @@
             // 剛開始靜止，記錄時間
             caterpillar.stoppedSince = Date.now();
           } else {
-            // 已經靜止一段時間，檢查是否達到 1000ms
-            if (!caterpillar.isStealthed && (Date.now() - caterpillar.stoppedSince >= 1000)) {
+            // 已經靜止一段時間，檢查是否達到 3000ms
+            if (!caterpillar.isStealthed && (Date.now() - caterpillar.stoppedSince >= 3000)) {
               enterStealth();
             }
           }
