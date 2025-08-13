@@ -132,7 +132,10 @@
     const caterpillarImg = new Image();
     caterpillarImg.src = 'https://raw.githubusercontent.com/BonBonChou/Butterfly_Journey/main/images/caterpillar.png';
     const grassImg = new Image();
-    grassImg.src = 'https://raw.githubusercontent.com/BonBonChou/Butterfly_Journey/main/images/bg.png'; // 你的草地圖
+    grassImg.src = 'https://raw.githubusercontent.com/BonBonChou/Butterfly_Journey/main/images/bg.png';
+
+    const butterflyImg = new Image();
+    butterflyImg.src = "https://raw.githubusercontent.com/BonBonChou/Butterfly_Journey/main/images/butterfly.png";
 
     const energyBar = document.getElementById("energy-fill");
     const healthBar = document.getElementById("health-fill");
@@ -304,6 +307,101 @@
         ctx.restore();
       });
     }
+    // -------------------- 花的資料 --------------------
+    let flowers = [];
+    let flowerSpawnInterval;
+
+    // 吸食進度
+    let feedingFlower = null;
+    let feedingProgress = 0;
+    const feedingTime = 3000; // 3 秒（毫秒）
+
+    // -------------------- 生成花（羽化後才啟動） --------------------
+    function spawnFlower() {
+      const spawnX = caterpillar.worldX + (Math.random() - 0.5) * 800;
+      const spawnY = caterpillar.worldY + (Math.random() - 0.5) * 800;
+
+      flowers.push({
+        x: spawnX,
+        y: spawnY
+      });
+    }
+
+    // -------------------- 更新花的吸食邏輯 --------------------
+    function updateFlowers(deltaTime) {
+      if (!caterpillar.isButterfly) return; // 毛毛蟲時不處理
+
+      let isCollidingWithFlower = false;
+
+      for (let i = 0; i < flowers.length; i++) {
+        const f = flowers[i];
+        const dx = caterpillar.worldX - f.x;
+        const dy = caterpillar.worldY - f.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < caterpillar.radius + 20) { // 半徑 20 的花
+          isCollidingWithFlower = true;
+
+          // 如果不是同一朵花，重置進度
+          if (feedingFlower !== f) {
+            feedingFlower = f;
+            feedingProgress = 0;
+          }
+
+          feedingProgress += deltaTime;
+
+          // 吸食完成
+          if (feedingProgress >= feedingTime) {
+            // 獎勵：和乳草一樣
+            caterpillar.energy = Math.min(caterpillar.maxEnergy, caterpillar.energy + (20 * (caterpillar.energyGainMult || 1)));
+            gainExp(10 * (caterpillar.expGainMult || 1));
+
+            // 移除花
+            flowers.splice(i, 1);
+            feedingFlower = null;
+            feedingProgress = 0;
+          }
+          break;
+        }
+      }
+
+      if (!isCollidingWithFlower) {
+        feedingFlower = null;
+        feedingProgress = 0;
+      }
+    }
+
+    // -------------------- 畫花 --------------------
+    function drawFlowers() {
+      if (!caterpillar.isButterfly) return;
+
+      flowers.forEach(f => {
+        const screenX = f.x - camera.x;
+        const screenY = f.y - camera.y;
+
+        ctx.drawImage(flowerImg, screenX - 20, screenY - 20, 40, 40);
+
+        // 如果這是正在吸食的花，畫讀條
+        if (f === feedingFlower) {
+          const progressRatio = feedingProgress / feedingTime;
+          ctx.beginPath();
+          ctx.arc(screenX, screenY - 30, 15, -Math.PI / 2, -Math.PI / 2 + progressRatio * 2 * Math.PI);
+          ctx.strokeStyle = "yellow";
+          ctx.lineWidth = 4;
+          ctx.stroke();
+        }
+      });
+    }
+
+    // -------------------- 羽化後初始化花系統 --------------------
+    function startFlowerMode() {
+      clearInterval(milkweedSpawnInterval); // 停止乳草生成
+      flowers = [];
+      feedingFlower = null;
+      feedingProgress = 0;
+      flowerSpawnInterval = setInterval(spawnFlower, 3000); // 每 3 秒生成一朵
+    }
+
     // ------------------------EXP系統、生命、能量----------------------------------------
     function gainExp(baseAmount) {
       const gain = Math.round(baseAmount * (1 + (caterpillar.expGainMult || 0)));
@@ -432,9 +530,7 @@
         apply: () => {
           // 變身為蝴蝶
           caterpillar.isButterfly = true;
-          caterpillarImg = butterflyImg; // 這裡用你的蝴蝶圖變數
-          caterpillar.viewDistance = Infinity; // 全圖視野
-          caterpillar.viewAngle = 360; // 全視角
+          caterpillarImg = butterflyImg;
           caterpillar.speed = Math.max(caterpillar.speed, 4); // 提升速度至至少 4
 
           // 移除視野距離、視野角度的升級項目
@@ -627,7 +723,9 @@
       drawBackground();
       drawMilkweeds();
       // 先畫地圖與物件，再畫黑色遮罩
-      drawVisionMask();
+      if (!caterpillar.isButterfly) {
+        drawVisionMask(); // 原本毛毛蟲的黑色遮罩
+      }
       // 再畫毛毛蟲、經驗條，確保它永遠可見
       drawPlayer();
       drawPlayerBars();
