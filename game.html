@@ -225,8 +225,6 @@
     const caterpillarVision = {
       angle: Math.PI / 3, // 60 度視野
       range: 200 // 視野距離
-      //caterpillarVision.range *= 1.5;  // 視野距離增加 50%
-      //caterpillarVision.angle *= 1.2;  // 視野角度增加 20%
     };
 
     // 畫黑色遮罩並挖出視野
@@ -412,22 +410,14 @@
       { 
         id: "energyGainUp", 
         name: "能量獲取 +20%", 
-        desc: () => {
-          const cur = caterpillar.energyGainMult || 0; // 以加算百分比存，0 代表 +0%
-          const future = cur + 0.2; // 每次 +0.2 (=20%)
-          return `吃乳草/花獲得的能量增加 ${Math.round(future * 100)}%`;
-        },
+        desc: () => "吃乳草/花獲得的能量增加 20%",
         maxPick: Infinity,
         apply: () => { caterpillar.energyGainMult = (caterpillar.energyGainMult || 1) + 0.2; }
       },
       {
         id: "expGainUp",
         name: "經驗值獲取 +20%",
-        desc: () => {
-          const cur = caterpillar.expGainMult || 0; // 同樣用加算百分比存
-          const future = cur + 0.2;
-          return `獲得的經驗值增加 ${Math.round(future * 100)}%`;
-        },
+        desc: () => "獲得的經驗值增加 20%",
         maxPick: Infinity,
         apply: () => {
           caterpillar.expGainMult = (caterpillar.expGainMult || 0) + 0.2;
@@ -439,7 +429,32 @@
         desc: () => "結蛹蛻變成蝴蝶", 
         maxPick: 1,
         onlyLevel: 10,
-        apply: () => { isButterfly = true; }
+        apply: () => {
+          // 變身為蝴蝶
+          caterpillar.isButterfly = true;
+          caterpillarImg = butterflyImg; // 這裡用你的蝴蝶圖變數
+          caterpillar.viewDistance = Infinity; // 全圖視野
+          caterpillar.viewAngle = 360; // 全視角
+          caterpillar.speed = Math.max(caterpillar.speed, 4); // 提升速度至至少 4
+
+          // 移除視野距離、視野角度的升級項目
+          upgrades = upgrades.filter(u => !["viewDistUp", "viewAngleUp"].includes(u.id));
+
+          // 加入蝴蝶專屬升級
+          upgrades.push({
+            id: "nectarSpeedUp",
+            name: "吸食花蜜速度 +20%",
+            desc: () => {
+              const cur = caterpillar.nectarSpeedMult || 1;
+              const future = cur * 1.2;
+              return `吸食花蜜時間減少 ${Math.round((1 - 1 / future) * 100)}%`;
+            },
+            maxPick: 3,
+            apply: () => {
+              caterpillar.nectarSpeedMult = (caterpillar.nectarSpeedMult || 1) * 1.2;
+            }
+          });
+        }
       }
     ];
 
@@ -448,7 +463,7 @@
 
     // 升級觸發
     function triggerLevelUpEvent() {
-      if (caterpillar.level === 3) {
+      if (caterpillar.level === 10) {
         const blessing = upgrades.find(u => u.id === "metamorph");
         if (blessing) {
           showUpgradeChoices([blessing]); // 只顯示羽化祝福
@@ -597,7 +612,7 @@
             caterpillar.energy = Math.min(100, caterpillar.energy + gain);
 
             // 經驗值增加（用你現有的系統）
-            gainExp(5); // 每顆乳草給 5 點經驗
+            gainExp(10); // 每顆乳草給 10 點經驗
 
             // 移除乳草
             milkweeds.splice(i, 1);
