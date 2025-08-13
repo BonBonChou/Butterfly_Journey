@@ -129,7 +129,7 @@
     const uiCtx = uiCanvas.getContext("2d");
     let isButterfly = false;  // 預設是毛毛蟲狀態，有視野限制
 
-    const caterpillarImg = new Image();
+    let caterpillarImg = new Image();
     caterpillarImg.src = 'https://raw.githubusercontent.com/BonBonChou/Butterfly_Journey/main/images/caterpillar.png';
     const grassImg = new Image();
     grassImg.src = 'https://raw.githubusercontent.com/BonBonChou/Butterfly_Journey/main/images/bg.png';
@@ -164,7 +164,8 @@
       expToNext: 20,
       regenRate: 0,        // 每秒回血比例（0.01 = 1%）
       hasRegen: false,
-      energyGainMult: 1,    // 吃乳草得到能量的倍率（1.0 = 原量）
+      energyGainMult: 1,   // 吃乳草得到能量的倍率（1.0 = 原量）
+      nectarSpeedMult: 1,  // 吸花蜜速度的倍率（1.0 = 原量）
       // stealth 相關欄位（新增）
       hasStealth: false,      // 由升級啟用（你的 apply() 已會設 true）
       isStealthed: false,     // 當前是否處於隱形狀態
@@ -310,6 +311,8 @@
     // -------------------- 花的資料 --------------------
     let flowers = [];
     let flowerSpawnInterval;
+    const flowerImg = new Image();
+    flowerImg.src = 'https://raw.githubusercontent.com/BonBonChou/Butterfly_Journey/main/images/flower.png';
 
     // 吸食進度
     let feedingFlower = null;
@@ -323,58 +326,24 @@
 
       flowers.push({
         x: spawnX,
-        y: spawnY
+        y: spawnY,
+        spawnTime: Date.now(),
+        lifespan: 10000 // 10 秒後消失
       });
     }
 
     // -------------------- 更新花的吸食邏輯 --------------------
     function updateFlowers(deltaTime) {
-      if (!caterpillar.isButterfly) return; // 毛毛蟲時不處理
-
-      let isCollidingWithFlower = false;
-
-      for (let i = 0; i < flowers.length; i++) {
-        const f = flowers[i];
-        const dx = caterpillar.worldX - f.x;
-        const dy = caterpillar.worldY - f.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        if (dist < caterpillar.radius + 20) { // 半徑 20 的花
-          isCollidingWithFlower = true;
-
-          // 如果不是同一朵花，重置進度
-          if (feedingFlower !== f) {
-            feedingFlower = f;
-            feedingProgress = 0;
-          }
-
-          feedingProgress += deltaTime;
-
-          // 吸食完成
-          if (feedingProgress >= feedingTime) {
-            // 獎勵：和乳草一樣
-            caterpillar.energy = Math.min(caterpillar.maxEnergy, caterpillar.energy + (20 * (caterpillar.energyGainMult || 1)));
-            gainExp(10 * (caterpillar.expGainMult || 1));
-
-            // 移除花
-            flowers.splice(i, 1);
-            feedingFlower = null;
-            feedingProgress = 0;
-          }
-          break;
+      const now = Date.now();
+      for (let i = flowers.length - 1; i >= 0; i--) {
+        if (now - flowers[i].spawnTime > flowers[i].lifespan) {
+          flowers.splice(i, 1); // 移除過期乳草
         }
-      }
-
-      if (!isCollidingWithFlower) {
-        feedingFlower = null;
-        feedingProgress = 0;
       }
     }
 
     // -------------------- 畫花 --------------------
     function drawFlowers() {
-      if (!caterpillar.isButterfly) return;
-
       flowers.forEach(f => {
         const screenX = f.x - camera.x;
         const screenY = f.y - camera.y;
@@ -395,11 +364,11 @@
 
     // -------------------- 羽化後初始化花系統 --------------------
     function startFlowerMode() {
-      clearInterval(milkweedSpawnInterval); // 停止乳草生成
+      //clearInterval(milkweedSpawnInterval); // 停止乳草生成
       flowers = [];
       feedingFlower = null;
       feedingProgress = 0;
-      flowerSpawnInterval = setInterval(spawnFlower, 3000); // 每 3 秒生成一朵
+      //flowerSpawnInterval = setInterval(spawnFlower, 3000); // 每 3 秒生成一朵
     }
 
     // ------------------------EXP系統、生命、能量----------------------------------------
@@ -531,10 +500,15 @@
           // 變身為蝴蝶
           caterpillar.isButterfly = true;
           caterpillarImg = butterflyImg;
-          caterpillar.speed = Math.max(caterpillar.speed, 4); // 提升速度至至少 4
+          startFlowerMode();
+          caterpillar.speed = Math.max(caterpillar.speed, 8); // 提升速度至至少 8
 
-          // 移除視野距離、視野角度的升級項目
-          upgrades = upgrades.filter(u => !["viewDistUp", "viewAngleUp"].includes(u.id));
+          // 刪除視野距離、視野角度
+          for (let i = upgrades.length - 1; i >= 0; i--) {
+            if (["visionRangeUp", "visionAngleUp"].includes(upgrades[i].id)) {
+              upgrades.splice(i, 1);
+            }
+          }
 
           // 加入蝴蝶專屬升級
           upgrades.push({
@@ -559,7 +533,7 @@
 
     // 升級觸發
     function triggerLevelUpEvent() {
-      if (caterpillar.level === 10) {
+      if (caterpillar.level === 2) {
         const blessing = upgrades.find(u => u.id === "metamorph");
         if (blessing) {
           showUpgradeChoices([blessing]); // 只顯示羽化祝福
@@ -681,8 +655,11 @@
           caterpillar.stoppedSince = null;
         }
       }
-
-      updateMilkweeds();
+      if (!caterpillar.isButterfly) {
+        updateMilkweeds();
+      } else {
+        updateFlowers();
+      } 
 
       // 位置更新（無論是哪個控制方式）
       caterpillar.worldX += caterpillar.vx;
@@ -695,23 +672,65 @@
       // === 檢查毛毛蟲與乳草碰撞 ===
       // **重要**：如果正在隱形則跳過碰撞（穿透）
       if (!caterpillar.isStealthed) {
-        // === 檢查毛毛蟲與乳草碰撞 ===
-        for (let i = milkweeds.length - 1; i >= 0; i--) {
-          const dx = caterpillar.worldX - milkweeds[i].x;
-          const dy = caterpillar.worldY - milkweeds[i].y;
-          const dist = Math.hypot(dx, dy);
+        if (!caterpillar.isButterfly) {
+          // === 檢查毛毛蟲與乳草碰撞 ===
+          for (let i = milkweeds.length - 1; i >= 0; i--) {
+            const dx = caterpillar.worldX - milkweeds[i].x;
+            const dy = caterpillar.worldY - milkweeds[i].y;
+            const dist = Math.hypot(dx, dy);
 
-          if (dist < caterpillar.radius + 20) { // 20 是乳草半徑
-            // 能量回復（上限 100）
-            const baseGain = 10;
-            const gain = Math.round(baseGain * (1 + (caterpillar.energyGainMult || 0)));
-            caterpillar.energy = Math.min(100, caterpillar.energy + gain);
+            if (dist < caterpillar.radius + 20) { // 20 是乳草半徑
+              // 能量回復（上限 100）
+              const baseGain = 10;
+              const gain = Math.round(baseGain * (1 + (caterpillar.energyGainMult || 0)));
+              caterpillar.energy = Math.min(100, caterpillar.energy + gain);
 
-            // 經驗值增加（用你現有的系統）
-            gainExp(10); // 每顆乳草給 10 點經驗
+              // 經驗值增加（用你現有的系統）
+              gainExp(10); // 每顆乳草給 10 點經驗
 
-            // 移除乳草
-            milkweeds.splice(i, 1);
+              // 移除乳草
+              milkweeds.splice(i, 1);
+            }
+          }
+        } else {
+          // === 檢查蝴蝶與花碰撞 ===
+          let isCollidingWithFlower = false;
+
+          for (let i = 0; i < flowers.length; i++) {
+            const f = flowers[i];
+            const dx = caterpillar.worldX - f.x;
+            const dy = caterpillar.worldY - f.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < caterpillar.radius + 20) { // 半徑 20 的花
+              isCollidingWithFlower = true;
+
+              // 如果不是同一朵花，重置進度
+              if (feedingFlower !== f) {
+                feedingFlower = f;
+                feedingProgress = 0;
+              }
+
+              feedingProgress += deltaTime;
+
+              // 吸食完成
+              if (feedingProgress >= feedingTime) {
+                // 獎勵：和乳草一樣
+                caterpillar.energy = Math.min(caterpillar.maxEnergy, caterpillar.energy + (20 * (caterpillar.energyGainMult || 1)));
+                gainExp(10 * (caterpillar.expGainMult || 1));
+
+                // 移除花
+                flowers.splice(i, 1);
+                feedingFlower = null;
+                feedingProgress = 0;
+              }
+              break;
+            }
+          }
+
+          if (!isCollidingWithFlower) {
+            feedingFlower = null;
+            feedingProgress = 0;
           }
         }
       } // end if not stealthed
@@ -720,8 +739,15 @@
     function draw() {
       // 清除畫面
       ctx.clearRect(0, 0, game.width, game.height);
+      maskCtx.clearRect(0, 0, game.width, game.height);
+
       drawBackground();
-      drawMilkweeds();
+      if (!caterpillar.isButterfly){
+        drawMilkweeds();
+      } else {
+        drawFlowers();
+      }
+      
       // 先畫地圖與物件，再畫黑色遮罩
       if (!caterpillar.isButterfly) {
         drawVisionMask(); // 原本毛毛蟲的黑色遮罩
@@ -848,7 +874,11 @@
     }, 1000);
     setInterval(() => {
       if (game.running && !isGamePaused) {
-        spawnMilkweed();
+        if (!caterpillar.isButterfly) {
+          spawnMilkweed();  
+        } else {
+          spawnFlower();
+        }
       }
     }, 1500);
 
