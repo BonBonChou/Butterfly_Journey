@@ -317,7 +317,7 @@
     // 吸食進度
     let feedingFlower = null;
     let feedingProgress = 0;
-    const feedingTime = 3000; // 3 秒（毫秒）
+    let feedingTime = 3000; // 3 秒（毫秒）
 
     // -------------------- 生成花（羽化後才啟動） --------------------
     function spawnFlower() {
@@ -337,7 +337,7 @@
       const now = Date.now();
       for (let i = flowers.length - 1; i >= 0; i--) {
         if (now - flowers[i].spawnTime > flowers[i].lifespan) {
-          flowers.splice(i, 1); // 移除過期乳草
+          flowers.splice(i, 1); // 移除過期花
         }
       }
     }
@@ -501,7 +501,7 @@
           caterpillar.isButterfly = true;
           caterpillarImg = butterflyImg;
           startFlowerMode();
-          caterpillar.speed = Math.max(caterpillar.speed, 8); // 提升速度至至少 8
+          caterpillar.speed = Math.max(2.5 * caterpillar.speed, 8); // 提升速度至至少 8
 
           // 刪除視野距離、視野角度
           for (let i = upgrades.length - 1; i >= 0; i--) {
@@ -513,15 +513,16 @@
           // 加入蝴蝶專屬升級
           upgrades.push({
             id: "nectarSpeedUp",
-            name: "吸食花蜜速度 +20%",
+            name: "進食時間減少 20%",
             desc: () => {
               const cur = caterpillar.nectarSpeedMult || 1;
               const future = cur * 1.2;
-              return `吸食花蜜時間減少 ${Math.round((1 - 1 / future) * 100)}%`;
+              return `吸食花蜜時間減少 20% (乘算)`;
             },
-            maxPick: 3,
+            maxPick: Infinity,
             apply: () => {
-              caterpillar.nectarSpeedMult = (caterpillar.nectarSpeedMult || 1) * 1.2;
+              caterpillar.nectarSpeedMult = (caterpillar.nectarSpeedMult || 1) * 0.8;
+              feedingTime *= caterpillar.nectarSpeedMult;
             }
           });
         }
@@ -716,8 +717,8 @@
               // 吸食完成
               if (feedingProgress >= feedingTime) {
                 // 獎勵：和乳草一樣
-                caterpillar.energy = Math.min(caterpillar.maxEnergy, caterpillar.energy + (20 * (caterpillar.energyGainMult || 1)));
-                gainExp(10 * (caterpillar.expGainMult || 1));
+                caterpillar.energy = Math.min(100, caterpillar.energy + (20 * (caterpillar.energyGainMult || 1)));
+                gainExp(20 * (caterpillar.expGainMult || 1));
 
                 // 移除花
                 flowers.splice(i, 1);
@@ -735,6 +736,7 @@
         }
       } // end if not stealthed
     }
+    
 
     function draw() {
       // 清除畫面
@@ -773,8 +775,16 @@
       location.href="https://bonbonchou.github.io/Butterfly_Journey/fail_ending.html";
     }
 
-    function gameLoop() {
+    let lastTime = 0; // 前一幀的時間
+    let deltaTime = 0; // 這一幀與上一幀的時間差（單位：秒）
+    function gameLoop(timestamp) {
       if (!game.running) return;
+
+      // 將 timestamp（毫秒）轉為秒差
+      deltaTime = (timestamp - lastTime);
+      lastTime = timestamp;
+
+
       update();
       draw();
       requestAnimationFrame(gameLoop);
@@ -852,7 +862,7 @@
     });
 
     // 啟動遊戲
-    gameLoop();
+    requestAnimationFrame(gameLoop);
 
     // === 能量每秒自動減少 ===
     setInterval(() => {
