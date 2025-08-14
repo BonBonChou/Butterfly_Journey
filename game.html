@@ -289,6 +289,28 @@
           milkweeds.splice(i, 1); // 移除過期乳草
         }
       }
+
+      if (!caterpillar.isStealthed) {
+        // === 檢查毛毛蟲與乳草碰撞 ===
+        for (let i = milkweeds.length - 1; i >= 0; i--) {
+          const dx = caterpillar.worldX - milkweeds[i].x;
+          const dy = caterpillar.worldY - milkweeds[i].y;
+          const dist = Math.hypot(dx, dy);
+
+          if (dist < caterpillar.radius + 20) { // 20 是乳草半徑
+            // 能量回復（上限 100）
+            const baseGain = 10;
+            const gain = Math.round(baseGain * (1 + (caterpillar.energyGainMult || 0)));
+            caterpillar.energy = Math.min(100, caterpillar.energy + gain);
+
+            // 經驗值增加（用你現有的系統）
+            gainExp(10); // 每顆乳草給 10 點經驗
+
+            // 移除乳草
+            milkweeds.splice(i, 1);
+          }
+        }
+      }
     }
     function drawMilkweeds() {
       milkweeds.forEach(m => {
@@ -314,6 +336,9 @@
     const flowerImg = new Image();
     flowerImg.src = 'https://raw.githubusercontent.com/BonBonChou/Butterfly_Journey/main/images/flower.png';
 
+    const poisonFlowerImg = new Image();
+    poisonFlowerImg.src = 'https://raw.githubusercontent.com/BonBonChou/Butterfly_Journey/main/images/poisoned_flower.png';
+
     // 吸食進度
     let feedingFlower = null;
     let feedingProgress = 0;
@@ -324,11 +349,15 @@
       const spawnX = caterpillar.worldX + (Math.random() - 0.5) * 800;
       const spawnY = caterpillar.worldY + (Math.random() - 0.5) * 800;
 
+      // 10% 機率生成毒花
+      const isPoisonous = Math.random() < 0.9;
+
       flowers.push({
         x: spawnX,
         y: spawnY,
         spawnTime: Date.now(),
-        lifespan: 10000 // 10 秒後消失
+        lifespan: 10000, // 10 秒後消失
+        poisonous: isPoisonous
       });
     }
 
@@ -340,6 +369,51 @@
           flowers.splice(i, 1); // 移除過期花
         }
       }
+
+      if (!caterpillar.isStealthed) {
+        // === 檢查蝴蝶與花碰撞 ===
+        let isCollidingWithFlower = false;
+
+        for (let i = 0; i < flowers.length; i++) {
+          const f = flowers[i];
+          const dx = caterpillar.worldX - f.x;
+          const dy = caterpillar.worldY - f.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist < caterpillar.radius + 20) { // 半徑 20 的花
+            isCollidingWithFlower = true;
+
+            // 如果不是同一朵花，重置進度
+            if (feedingFlower !== f) {
+              feedingFlower = f;
+              feedingProgress = 0;
+            }
+
+            feedingProgress += deltaTime;
+
+            // 吸食完成
+            if (feedingProgress >= feedingTime) {
+              if (f.poisonous) { // 毒花：扣血，不加能量 & 經驗
+                caterpillar.health = Math.max(0, caterpillar.health - 30);
+              } else {
+                // 獎勵：和乳草一樣
+                caterpillar.energy = Math.min(100, caterpillar.energy + (20 * (caterpillar.energyGainMult || 1)));
+                gainExp(20 * (caterpillar.expGainMult || 1));
+              }
+              // 移除花
+              flowers.splice(i, 1);
+              feedingFlower = null;
+              feedingProgress = 0;
+            }
+            break;
+          }
+        }
+
+        if (!isCollidingWithFlower) {
+          feedingFlower = null;
+          feedingProgress = 0;
+        }
+      }
     }
 
     // -------------------- 畫花 --------------------
@@ -348,7 +422,11 @@
         const screenX = f.x - camera.x;
         const screenY = f.y - camera.y;
 
-        ctx.drawImage(flowerImg, screenX - 20, screenY - 20, 40, 40);
+        if (f.poisonous) {
+          ctx.drawImage(poisonFlowerImg, screenX - 20, screenY - 20, 40, 40);
+        } else {
+          ctx.drawImage(flowerImg, screenX - 20, screenY - 20, 40, 40);
+        }
 
         // 如果這是正在吸食的花，畫讀條
         if (f === feedingFlower) {
@@ -825,72 +903,6 @@
       // 讓相機中心對準角色
       camera.x = caterpillar.worldX - game.width / 2;
       camera.y = caterpillar.worldY - game.height / 2;
-
-      // === 檢查毛毛蟲與乳草碰撞 ===
-      // **重要**：如果正在隱形則跳過碰撞（穿透）
-      if (!caterpillar.isStealthed) {
-        if (!caterpillar.isButterfly) {
-          // === 檢查毛毛蟲與乳草碰撞 ===
-          for (let i = milkweeds.length - 1; i >= 0; i--) {
-            const dx = caterpillar.worldX - milkweeds[i].x;
-            const dy = caterpillar.worldY - milkweeds[i].y;
-            const dist = Math.hypot(dx, dy);
-
-            if (dist < caterpillar.radius + 20) { // 20 是乳草半徑
-              // 能量回復（上限 100）
-              const baseGain = 10;
-              const gain = Math.round(baseGain * (1 + (caterpillar.energyGainMult || 0)));
-              caterpillar.energy = Math.min(100, caterpillar.energy + gain);
-
-              // 經驗值增加（用你現有的系統）
-              gainExp(10); // 每顆乳草給 10 點經驗
-
-              // 移除乳草
-              milkweeds.splice(i, 1);
-            }
-          }
-        } else {
-          // === 檢查蝴蝶與花碰撞 ===
-          let isCollidingWithFlower = false;
-
-          for (let i = 0; i < flowers.length; i++) {
-            const f = flowers[i];
-            const dx = caterpillar.worldX - f.x;
-            const dy = caterpillar.worldY - f.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            if (dist < caterpillar.radius + 20) { // 半徑 20 的花
-              isCollidingWithFlower = true;
-
-              // 如果不是同一朵花，重置進度
-              if (feedingFlower !== f) {
-                feedingFlower = f;
-                feedingProgress = 0;
-              }
-
-              feedingProgress += deltaTime;
-
-              // 吸食完成
-              if (feedingProgress >= feedingTime) {
-                // 獎勵：和乳草一樣
-                caterpillar.energy = Math.min(100, caterpillar.energy + (20 * (caterpillar.energyGainMult || 1)));
-                gainExp(20 * (caterpillar.expGainMult || 1));
-
-                // 移除花
-                flowers.splice(i, 1);
-                feedingFlower = null;
-                feedingProgress = 0;
-              }
-              break;
-            }
-          }
-
-          if (!isCollidingWithFlower) {
-            feedingFlower = null;
-            feedingProgress = 0;
-          }
-        }
-      } // end if not stealthed
     }
     
 
