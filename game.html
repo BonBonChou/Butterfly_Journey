@@ -333,7 +333,7 @@
     }
 
     // -------------------- 更新花的吸食邏輯 --------------------
-    function updateFlowers(deltaTime) {
+    function updateFlowers() {
       const now = Date.now();
       for (let i = flowers.length - 1; i >= 0; i--) {
         if (now - flowers[i].spawnTime > flowers[i].lifespan) {
@@ -614,6 +614,160 @@
       caterpillar.stoppedSince = null;
     }
 
+    // -------------------- 天敵圖片 --------------------
+    const spiderImg = new Image();
+    spiderImg.src = 'https://raw.githubusercontent.com/BonBonChou/Butterfly_Journey/main/images/spider.png';
+
+    const scorpionImg = new Image();
+    scorpionImg.src = 'https://raw.githubusercontent.com/BonBonChou/Butterfly_Journey/main/images/scorpion.png';
+
+    const sparrowImg = new Image();
+    sparrowImg.src = 'https://raw.githubusercontent.com/BonBonChou/Butterfly_Journey/main/images/sparrow.png';
+
+    const frogImg = new Image();
+    frogImg.src = 'https://raw.githubusercontent.com/BonBonChou/Butterfly_Journey/main/images/frog.png';
+
+    // -------------------- 天敵資料表 --------------------
+    const enemyTypes = [
+      {
+        id: "spider",
+        img: (() => { let i = new Image(); i.src = 'https://raw.githubusercontent.com/BonBonChou/Butterfly_Journey/main/images/spider.png'; return i; })(),
+        speed: 1.5,
+        scale: 0.1,
+        rotateWithMovement: true,
+        extraAngle: 0,
+        spawnAsCaterpillar: true
+      },
+      {
+        id: "scorpion",
+        img: (() => { let i = new Image(); i.src = 'https://raw.githubusercontent.com/BonBonChou/Butterfly_Journey/main/images/scorpion.png'; return i; })(),
+        speed: 1.2,
+        scale: 0.1,
+        rotateWithMovement: true,
+        extraAngle: Math.PI, // 180 度
+        spawnAsCaterpillar: true
+      },
+      {
+        id: "sparrow",
+        img: (() => { let i = new Image(); i.src = 'https://raw.githubusercontent.com/BonBonChou/Butterfly_Journey/main/images/sparrow.png'; return i; })(),
+        speed: 2.5,
+        scale: 3 * 0.1,
+        rotateWithMovement: false,
+        extraAngle: 0,
+        spawnAsCaterpillar: true
+      },
+      {
+        id: "frog",
+        img: (() => { let i = new Image(); i.src = 'https://raw.githubusercontent.com/BonBonChou/Butterfly_Journey/main/images/frog.png'; return i; })(),
+        speed: 1.8,
+        scale: 3 * 0.1,
+        rotateWithMovement: true,
+        extraAngle: Math.PI,
+        spawnAsCaterpillar: false
+      }
+    ];
+
+    // -------------------- 天敵系統 --------------------
+    let enemies = [];
+    const enemySpawnInterval = 3000; // 每 3 秒嘗試生成
+    const enemyLifetime = 10000; // 存在 10 秒
+    const enemySafeRadius = 200; // 與玩家距離 < 200px 不生成
+
+    function spawnEnemy() {
+      const availableTypes = enemyTypes.filter(t => 
+        caterpillar.isButterfly ? true : t.spawnAsCaterpillar
+      );
+      if (availableTypes.length === 0) return;
+
+      const type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+
+      let spawnX, spawnY, dist;
+      do {
+        spawnX = caterpillar.worldX + (Math.random() - 0.5) * 1200;
+        spawnY = caterpillar.worldY + (Math.random() - 0.5) * 1200;
+        dist = Math.sqrt((spawnX - caterpillar.worldX) ** 2 + (spawnY - caterpillar.worldY) ** 2);
+      } while (dist < enemySafeRadius);
+
+      enemies.push({
+        type: type, // 存整個 enemyType 物件
+        x: spawnX,
+        y: spawnY,
+        speed: type.speed,
+        spawnTime: Date.now(),
+        dirX: Math.random() * 2 - 1,
+        dirY: Math.random() * 2 - 1
+      });
+    }
+
+
+    function updateEnemies() {
+      const now = Date.now();
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        const e = enemies[i];
+
+        // 偶爾改變方向（每秒大約 5% 機率）
+        if (Math.random() < 0.05) {
+          e.dirX = Math.random() * 2 - 1;
+          e.dirY = Math.random() * 2 - 1;
+          const len = Math.sqrt(e.dirX * e.dirX + e.dirY * e.dirY);
+          e.dirX /= len;
+          e.dirY /= len;
+        }
+
+        // 移動
+        e.x += e.dirX * e.speed;
+        e.y += e.dirY * e.speed;
+
+        // 時間到 -> 消失
+        if (now - e.spawnTime >= enemyLifetime) {
+          enemies.splice(i, 1);
+          continue;
+        }
+
+        // 天敵碰撞檢查（隱形時不檢查）
+        if (!caterpillar.isStealthed) {
+          const dx = caterpillar.worldX - e.x;
+          const dy = caterpillar.worldY - e.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < caterpillar.radius + 20) {
+            caterpillar.health -= 30;
+            if (caterpillar.health < 0) caterpillar.health = 0;
+            enemies.splice(i, 1);
+          }
+        }
+      }
+    }
+
+    function drawEnemies() {
+      enemies.forEach(e => {
+        const screenX = e.x - camera.x;
+        const screenY = e.y - camera.y;
+        const type = e.type;
+
+        ctx.save();
+        ctx.translate(screenX, screenY);
+
+        if (type.rotateWithMovement) {
+          let angle = Math.atan2(e.dirY, e.dirX) + Math.PI / 2 + type.extraAngle;
+          ctx.rotate(angle);
+        } else {
+          ctx.rotate(type.extraAngle);
+        }
+
+        const drawW = type.img.width * type.scale;
+        const drawH = type.img.height * type.scale;
+
+        // 設定陰影來模擬外框
+        ctx.shadowColor = 'black';
+        ctx.shadowBlur = 20; // 模糊值
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        
+        ctx.drawImage(type.img, -drawW / 2, -drawH / 2, drawW, drawH);
+        ctx.restore();
+      });
+    }
+
     //--------------更新畫面-----------------------------------
     function update() {
       if (isGamePaused) return; // 暫停時不更新遊戲邏輯
@@ -660,7 +814,9 @@
         updateMilkweeds();
       } else {
         updateFlowers();
-      } 
+      }
+      
+      updateEnemies();
 
       // 位置更新（無論是哪個控制方式）
       caterpillar.worldX += caterpillar.vx;
@@ -749,7 +905,7 @@
       } else {
         drawFlowers();
       }
-      
+      drawEnemies();
       // 先畫地圖與物件，再畫黑色遮罩
       if (!caterpillar.isButterfly) {
         drawVisionMask(); // 原本毛毛蟲的黑色遮罩
@@ -891,6 +1047,11 @@
         }
       }
     }, 1500);
+    setInterval(() => {
+      if (game.running && !isGamePaused) {
+        spawnEnemy();
+      }
+    }, enemySpawnInterval);
 
   </script>
 </body>
