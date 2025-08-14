@@ -352,7 +352,7 @@
       const spawnY = caterpillar.worldY + (Math.random() - 0.5) * 800;
 
       // 30% 機率生成毒花
-      const isPoisonous = Math.random() < 0.7;
+      const isPoisonous = Math.random() < 0.3;
 
       flowers.push({
         x: spawnX,
@@ -1312,6 +1312,10 @@
 
       if (caterpillar.energy <= 0) {
         caterpillar.energy = 0;
+        gameOver();
+      }
+      if (caterpillar.health <= 0) {
+        caterpillar.health = 0;
         gameOver();
       }
     }, 1000);
