@@ -352,7 +352,7 @@
       const spawnY = caterpillar.worldY + (Math.random() - 0.5) * 800;
 
       // 30% 機率生成毒花
-      const isPoisonous = Math.random() < 0.3;
+      const isPoisonous = Math.random() < 0.7;
 
       flowers.push({
         x: spawnX,
@@ -813,12 +813,17 @@
         const e = enemies[i];
 
         // 偶爾改變方向（每秒大約 1% 機率）
-        if (Math.random() < 0.01) {
-          e.dirX = Math.random() * 2 - 1;
-          e.dirY = Math.random() * 2 - 1;
-          const len = Math.sqrt(e.dirX * e.dirX + e.dirY * e.dirY);
-          e.dirX /= len;
-          e.dirY /= len;
+        if (
+          e.id !== "spider" ||        // 如果不是蜘蛛，照樣亂跑
+          !e.isChasingPlayer           // 是蜘蛛但沒在追人，也照樣亂跑
+        ) {
+          if (Math.random() < 0.01) {
+            e.dirX = Math.random() * 2 - 1;
+            e.dirY = Math.random() * 2 - 1;
+            const len = Math.sqrt(e.dirX * e.dirX + e.dirY * e.dirY);
+            e.dirX /= len;
+            e.dirY /= len;
+          }
         }
 
         // 移動
@@ -1050,7 +1055,7 @@
                 e.dirX = (caterpillar.worldX - e.x) / len;
                 e.dirY = (caterpillar.worldY - e.y) / len;
               }
-              e.speed = 4; // 加速追擊
+              e.speed = 3; // 加速追擊
             }
           }
         });
@@ -1312,10 +1317,6 @@
 
       if (caterpillar.energy <= 0) {
         caterpillar.energy = 0;
-        gameOver();
-      }
-      if (caterpillar.health <= 0) {
-        caterpillar.health = 0;
         gameOver();
       }
     }, 1000);
