@@ -1062,7 +1062,6 @@
       }
     }
 
-
     function drawSpiderWebs() {
       spiderWebs.forEach(web => {
         const screenX = web.x - camera.x;
@@ -1086,11 +1085,123 @@
         ctx.restore();
       });
     }
+    //--------------凍結、出現森林------------------------------------------
+    let southMode = false;
+    let freezeStartTime = null;
+    let freezeSpeed = 0.02; // 每毫秒往下移動的距離
+    let freezeLineY = null;
+    let forestY = null;
+    const forestX = 0;
 
+    const forestImg = new Image();
+    forestImg.src = 'https://raw.githubusercontent.com/BonBonChou/Butterfly_Journey/main/images/forest.png';
+
+    function checkSouthMigrationTrigger() {
+      if (!southMode && caterpillar.level >= 3) {
+        southMode = true;
+        freezeStartTime = Date.now();
+        freezeLineY = caterpillar.worldY - 300; // 初始凍結線稍微在上方
+        forestY = caterpillar.worldY + 4000;    // 森林位置
+      }
+    }
+
+    //-------凍結邊界更新與碰撞判定-----------
+    function updateFreezingZone() {
+      if (!southMode) return;
+
+      const elapsed = Date.now() - freezeStartTime;
+      freezeLineY += freezeSpeed * elapsed;
+      freezeStartTime = Date.now(); // 重設起點以避免累加過大
+
+      if (caterpillar.worldY < freezeLineY) {
+        gameOver(); // 玩家太北邊
+      }
+    }
+
+    //-------森林到達檢查與跳頁----------
+    function checkForestArrival() {
+      if (!southMode) return;
+      const dx = forestX - caterpillar.worldX;
+      const dy = forestY - caterpillar.worldY;
+      const dist = Math.hypot(dx, dy);
+      if (dist < 50) { // 到達範圍
+        window.location.href = "https://bonbonchou.github.io/Butterfly_Journey/ending.html";
+      }
+    }
+
+    //------畫森林---------------------------
+    function drawForestTarget() {
+      if (!southMode || !forestImg.complete) return;
+
+      const screenX = forestX - camera.x
+      const screenY = forestY - camera.y;
+
+      const drawW = forestImg.width * 0.3;
+      const drawH = forestImg.height * 0.3;
+
+      ctx.save();
+      ctx.translate(screenX, screenY);
+
+      // 🌟 發光效果（簡單光暈）
+      const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 300); // 閃爍因子
+      ctx.shadowColor = `rgba(255, 255, 0, ${0.4 + 0.4 * pulse})`;
+      ctx.shadowBlur = 100;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+
+      ctx.drawImage(forestImg, -drawW / 2, -drawH / 2, drawW, drawH);
+      ctx.restore();
+    }
+
+    //------指南針箭頭與距離提示--------
+    function drawForestCompass() {
+      if (!southMode) return;
+
+      const dx = forestX - caterpillar.worldX;
+      const dy = forestY - caterpillar.worldY;
+      const dist = Math.hypot(dx, dy);
+      const angle = Math.atan2(dy, dx) + Math.PI / 2;
+
+      const centerX = canvas.width - 60;
+      const centerY = 60;
+
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.rotate(angle);
+      
+      // 畫箭頭
+      ctx.beginPath();
+      ctx.moveTo(0, -10);
+      ctx.lineTo(6, 10);
+      ctx.lineTo(-6, 10);
+      ctx.closePath();
+      ctx.fillStyle = "green";
+      ctx.fill();
+
+      ctx.restore();
+
+      // 顯示剩餘公里數
+      const kmLeft = dist.toFixed(1);
+      ctx.font = "16px Arial";
+      ctx.fillStyle = "white";
+      ctx.fillText(`${kmLeft} km`, centerX - 30, centerY + 30);
+    }
+
+    //-----凍結區視覺效果-------------
+    function drawFreezingZone() {
+      if (!southMode) return;
+
+      const screenY = freezeLineY - camera.y;
+
+      ctx.fillStyle = "rgba(150, 220, 255, 0.4)";
+      ctx.fillRect(0, 0, canvas.width, screenY);
+    }
 
     //--------------更新畫面-----------------------------------
     function update() {
       if (isGamePaused) return; // 暫停時不更新遊戲邏輯
+
+      checkSouthMigrationTrigger();
 
       if (!isUsingJoystick) {
         if (caterpillar.isStuck) {
@@ -1140,11 +1251,15 @@
       } else {
         updateFlowers();
       }
+
+      updateFreezingZone();
       
       updateEnemies();
       updateScorpionProjectiles();
       updateFrogTongues();
       updateSpiderWebs();
+
+      checkForestArrival();
 
       if (caterpillar.isStuck) {
         if (Date.now() >= caterpillar.stuckUntil) {
@@ -1170,6 +1285,8 @@
       maskCtx.clearRect(0, 0, game.width, game.height);
 
       drawBackground();
+      drawFreezingZone();
+
       if (!caterpillar.isButterfly){
         drawMilkweeds();
       } else {
@@ -1179,6 +1296,9 @@
       drawScorpionProjectiles();
       drawFrogTongues();
       drawSpiderWebs();
+
+      drawForestCompass();
+      drawForestTarget();
 
       // 先畫地圖與物件，再畫黑色遮罩
       if (!caterpillar.isButterfly) {
