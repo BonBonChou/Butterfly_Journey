@@ -352,7 +352,7 @@
       const spawnY = caterpillar.worldY + (Math.random() - 0.5) * 800;
 
       // 30% 機率生成毒花
-      const isPoisonous = Math.random() < 0.7;
+      const isPoisonous = Math.random() < 0.3;
 
       flowers.push({
         x: spawnX,
@@ -443,6 +443,8 @@
     }
 
     // -------------------- 羽化後初始化花系統 --------------------
+    let enemySkillInterval = null;
+
     function startFlowerMode() {
       //clearInterval(milkweedSpawnInterval); // 停止乳草生成
       flowers = [];
@@ -455,19 +457,38 @@
       if (sparrowType) {
         sparrowType.speed = 5;
       }
-      // 蠍子每3秒發射毒針
-      setInterval(() => {
-        enemies.forEach(e => {
-          if (e.id === "scorpion") {
-            shootScorpionProjectile(e);
-          } else if (e.id === "frog") {
-            shootFrogTongue(e);
-          } else if (e.id === "spider") {
-            createSpiderWeb(e);
-          }
-        });
-      }, 3000);
 
+      // 啟動敵人技能
+      enemySkillInterval = setInterval(runEnemySkills, 3000);
+    }
+    
+    function runEnemySkills() {
+      enemies.forEach(e => {
+        if (e.id === "scorpion") {
+          shootScorpionProjectile(e);
+        } else if (e.id === "frog") {
+          shootFrogTongue(e);
+        } else if (e.id === "spider") {
+          createSpiderWeb(e);
+        }
+      });
+    }
+
+    // 在暫停時停掉
+    function pauseGame() {
+      isGamePaused = true;
+      if (enemySkillInterval) {
+        clearInterval(enemySkillInterval);
+        enemySkillInterval = null;
+      }
+    }
+
+    // 在恢復時重新開啟
+    function resumeGame() {
+      isGamePaused = false;
+      if (!enemySkillInterval) {
+        enemySkillInterval = setInterval(runEnemySkills, 3000);
+      }
     }
 
     // ------------------------EXP系統、生命、能量----------------------------------------
@@ -669,6 +690,7 @@
 
     function showUpgradeChoices(choices) {
       isGamePaused = true; // 暫停遊戲
+      pauseGame();
       currentUpgradeChoices = choices;
 
       // 顯示卡片與動態描述
@@ -699,6 +721,7 @@
       // 關閉 UI
       document.getElementById("upgrade-container").style.display = "none";
       isGamePaused = false; // 恢復遊戲
+      resumeGame();
     }
     //--------------擬態----------------------------
     function enterStealth() {
