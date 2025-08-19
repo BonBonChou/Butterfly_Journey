@@ -212,6 +212,7 @@
       energyGainMult: 1,   // 吃乳草得到能量的倍率（1.0 = 原量）
       nectarSpeedMult: 1,  // 吸花蜜速度的倍率（1.0 = 原量）
       isStuck: false,      // 被蜘蛛網纏住
+      damageFlashTime: 0,
 
       // stealth 相關欄位（新增）
       hasStealth: false,      // 由升級啟用（你的 apply() 已會設 true）
@@ -219,6 +220,7 @@
       stoppedSince: null,     // 若靜止，記錄開始靜止的時間（ms）
       stealthAlpha: 0.45      // 隱形時畫面透明度
     };
+
     function drawPlayer() { // === 畫毛毛蟲 ===
       uiCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height); // 每次清掉舊的遮罩
       if (caterpillarImg.complete) {
@@ -240,8 +242,13 @@
         uiCtx.globalAlpha = caterpillar.isStealthed ? caterpillar.stealthAlpha : 1.0;
 
         // 設定陰影來模擬外框
-        uiCtx.shadowColor = 'black';
-        uiCtx.shadowBlur = 20; // 模糊值，越小描邊越銳利；越大越柔和。
+        if (caterpillar.damageFlashTime > 0) {
+          uiCtx.shadowColor = 'red';
+          uiCtx.shadowBlur = 20; // 模糊值，越小描邊越銳利；越大越柔和。
+        } else {
+          uiCtx.shadowColor = 'black';
+          uiCtx.shadowBlur = 20;
+        } 
         uiCtx.shadowOffsetX = 0;
         uiCtx.shadowOffsetY = 0;
 
@@ -364,7 +371,11 @@
             if (angleBetween < caterpillarVision.angle / 2) {
               // ✅ 在視野範圍內
               showKnowledgeDialog(
-                ["乳草是毛毛蟲的食物。"],
+                [
+                  "乳草是毛毛蟲唯一的食物。",
+                  "對其他動物而言，乳草是劇毒的",
+                  "因此毛毛蟲能吸收毒素讓自身變毒，嚇阻天敵"
+                ],
                 (mw.x - camera.x > 400) ? (mw.x - camera.x - 160) : (mw.x - camera.x + 160),
                 (mw.y - camera.y > 400) ? (mw.y - camera.y - 160) : (mw.y - camera.y + 160)
               );
@@ -470,7 +481,11 @@
           if (dist < 400) {
             if (f.poisonous && !poisonedflowerKnowledgeShown) {
               showKnowledgeDialog(
-                ["被撒過農藥的花是有毒的。"],
+                [
+                  "被撒過農藥的花是有毒的。",
+                  "人類對於農地的開發，也使其原始棲地喪失。",
+                  "全球暖化導致的氣候變遷也使得蝴蝶遷徙更加困難。"
+                ],
                 (f.x - camera.x > 400) ? (f.x - camera.x - 160) : (f.x - camera.x + 160),
                 (f.y - camera.y > 400) ? (f.y - camera.y - 160) : (f.y - camera.y + 160)
               );
@@ -479,7 +494,12 @@
               break;
             } else if (!f.poisonous && !flowerKnowledgeShown) {
               showKnowledgeDialog(
-                ["花是蝴蝶的食物。"],
+                [
+                  "花是蝴蝶的食物。",
+                  "不同於幼蟲，蝴蝶以捲曲口器吸取花蜜，",
+                  "並在飛行過程中為花朵授粉，",
+                  "成為植物繁殖的關鍵媒介。"
+                ],
                 (f.x - camera.x > 400) ? (f.x - camera.x - 160) : (f.x - camera.x + 160),
                 (f.y - camera.y > 400) ? (f.y - camera.y - 160) : (f.y - camera.y + 160)
               );
@@ -516,6 +536,7 @@
             if (feedingProgress >= feedingTime) {
               if (f.poisonous) { // 毒花：扣血，不加能量 & 經驗
                 caterpillar.health = Math.max(0, caterpillar.health - 30);
+                caterpillar.damageFlashTime = 0.5;
               } else {
                 // 獎勵：和乳草一樣
                 caterpillar.energy = Math.min(100, caterpillar.energy + (20 * (caterpillar.energyGainMult || 1)));
@@ -726,6 +747,14 @@
           // 變身為蝴蝶
           caterpillar.isButterfly = true;
           caterpillarImg = butterflyImg;
+          showKnowledgeDialog(
+          [
+            "毛毛蟲結成蛹，經歷組織液化與細胞重組。",
+            "約八天後破蛹而出，變成蝴蝶。",
+            "蝴蝶的複眼使視野可達 360 度，具高度行動力。"
+          ],
+          150, 200, // 對話框位置
+          );
           startFlowerMode();
           caterpillar.speed = Math.max(2 * caterpillar.speed, 6); // 提升速度至至少 8
 
@@ -1012,6 +1041,7 @@
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist < caterpillar.radius + 20) {
             caterpillar.health -= 30;
+            caterpillar.damageFlashTime = 0.5;
             if (caterpillar.health < 0) caterpillar.health = 0;
             enemies.splice(i, 1);
           }
@@ -1086,6 +1116,7 @@
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist < caterpillar.radius) {
             caterpillar.health -= 30;
+            caterpillar.damageFlashTime = 0.5;
             scorpionProjectiles.splice(i, 1); // 提前消失
           }
         }
@@ -1145,6 +1176,7 @@
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist < caterpillar.radius) {
             caterpillar.health = Math.max(0, caterpillar.health - 30);
+            caterpillar.damageFlashTime = 0.5;
             t.spawnTime = 0; // 讓舌頭立即消失
           }
         }
@@ -1285,6 +1317,8 @@
                 "蝴蝶如何知道自己要飛往哪裡？",
                 "這依舊是個謎。",
                 "蝴蝶觸鬚有追蹤太陽位置的機制。",
+                "還能感知氣流、借助微風省力前進。",
+                "透過 8 字形飛行，敏捷躲避天敵。",
                 "沿著右上角指標飛行，找到最終的目的地！"
               ],
               700, 200,
@@ -1315,6 +1349,7 @@
       const dy = forestY - caterpillar.worldY;
       const dist = Math.hypot(dx, dy);
       if (dist < 100) { // 到達範圍
+        localStorage.setItem('gameTime', gameTime);
         window.location.href = "https://bonbonchou.github.io/Butterfly_Journey/ending.html";
       }
     }
@@ -1388,6 +1423,8 @@
     }
 
     //--------------更新畫面-----------------------------------
+    let gameTime = 0;
+
     let lastUpdateTime = Date.now();
     let dt = 0;
     function update() {
@@ -1397,6 +1434,7 @@
       }
       if (!isGamePaused) {
         dt = (now - lastUpdateTime) / 1000;
+        gameTime += dt;
       }
       if (isGamePaused) return; // 暫停時不更新遊戲邏輯
 
@@ -1468,6 +1506,13 @@
         }
       }
 
+      if (caterpillar.damageFlashTime > 0) {
+        caterpillar.damageFlashTime -= 0.001 * deltaTime;
+        if (caterpillar.damageFlashTime < 0) {
+          caterpillar.damageFlashTime = 0;
+        }
+      }
+
       // 位置更新（無論是哪個控制方式）
       caterpillar.worldX += caterpillar.vx;
       caterpillar.worldY += caterpillar.vy;
@@ -1529,7 +1574,6 @@
     function gameLoop(timestamp) {
       if (!game.running) return;
 
-      // 將 timestamp（毫秒）轉為秒差
       deltaTime = (timestamp - lastTime);
       lastTime = timestamp;
 
@@ -1545,6 +1589,9 @@
     let onDialogEnd = null;
 
     function showKnowledgeDialog(pages, x, y, onFinish = null) {
+      // 暫停遊戲
+      isGamePaused = true;
+      
       currentDialogIndex = 0;
       currentDialogPages = pages;
       onDialogEnd = onFinish;
@@ -1587,9 +1634,6 @@
       // 顯示第一段
       textEl.textContent = pages[currentDialogIndex];
 
-      // 暫停遊戲
-      isGamePaused = true;
-
       btn.onclick = () => {
         currentDialogIndex++;
         if (currentDialogIndex < currentDialogPages.length) {
@@ -1606,7 +1650,7 @@
 
     showKnowledgeDialog(
       [
-        "毛毛蟲的視野是有限的，只有中間一小塊區域可以看清楚。",
+        "毛毛蟲的視野是有限的，只有前方一小塊區域可以看清楚。",
         "你需要移動身體才能看到更多的世界。",
         "小心四周，危險可能就在你看不到的地方。"
       ],
@@ -1614,8 +1658,9 @@
       () => {
         showKnowledgeDialog(
           [
-            "需要透過進食來補充能量 (藍條)。",
+            "需要透過進食來獲得經驗和補充能量 (藍條)。",
             "能量耗盡之日，便是葬身之時。",
+            "擁有足夠經驗，就能羽化成蝶。",
             "開始你新的一生吧！"
           ],
           150, 500, // 對話框位置
@@ -1720,6 +1765,10 @@
 
       if (caterpillar.energy <= 0) {
         caterpillar.energy = 0;
+        gameOver();
+      }
+      if (caterpillar.health <= 0) {
+        caterpillar.health = 0;
         gameOver();
       }
     }, 1000);
