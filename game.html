@@ -82,7 +82,7 @@
       border: 2px solid black;
       border-radius: 10px;
       padding: 15px;
-      width: 200px;
+      width: auto;
       box-shadow: 0 0 10px rgba(0,0,0,0.4);
     }
 
@@ -132,9 +132,9 @@
 </head>
 <body>
   <div id="game-container">
-    <canvas id="game-canvas" width="800" height="600"></canvas>
-    <canvas id="mask-canvas" width="800" height="600"></canvas> <!-- 上層畫黑色遮罩 -->
-    <canvas id="ui-canvas" width="800" height="600"></canvas>   <!-- UI & 毛毛蟲 -->
+    <canvas id="game-canvas" width="800" height="800"></canvas>
+    <canvas id="mask-canvas" width="800" height="800"></canvas> <!-- 上層畫黑色遮罩 -->
+    <canvas id="ui-canvas" width="800" height="800"></canvas>   <!-- UI & 毛毛蟲 -->
 
     <!-- 升級選項容器 -->
     <div id="upgrade-container" style="display:none;">
@@ -292,11 +292,11 @@
       maskCtx.beginPath();
       maskCtx.moveTo(game.width / 2, game.height / 2);
       maskCtx.arc(
-        game.width / 2,
-        game.height / 2,
-        caterpillarVision.range,
-        caterpillar.facingAngle - caterpillarVision.angle / 2,
-        caterpillar.facingAngle + caterpillarVision.angle / 2
+        game.width / 2, // x 中心點
+        game.height / 2, // y 中心點
+        caterpillarVision.range, // 半徑
+        caterpillar.facingAngle - caterpillarVision.angle / 2, // 起始角度
+        caterpillar.facingAngle + caterpillarVision.angle / 2 // 結束角度
       );
       maskCtx.closePath();
       maskCtx.fill();
@@ -359,14 +359,14 @@
 
             // 內積結果即兩角度差之餘弦值
             const dot = dirX * toMilkweedX + dirY * toMilkweedY;
-            const angleBetween = Math.acos(dot); // 弧度
+            const angleBetween = Math.acos(dot);
 
             if (angleBetween < caterpillarVision.angle / 2) {
               // ✅ 在視野範圍內
               showKnowledgeDialog(
-                "乳草是毛毛蟲的食物。",
-                mw.x - camera.x,
-                mw.y - camera.y + 50
+                ["乳草是毛毛蟲的食物。"],
+                mw.x - camera.x - 160,
+                mw.y - camera.y + 40
               );
               milkweedKnowledgeShown = true;
               isGamePaused = true;
@@ -430,6 +430,9 @@
     let feedingProgress = 0;
     let feedingTime = 3000; // 3 秒（毫秒）
 
+    let flowerKnowledgeShown = false;
+    let poisonedflowerKnowledgeShown = false;
+
     // -------------------- 生成花（羽化後才啟動） --------------------
     function spawnFlower() {
       const spawnX = caterpillar.worldX + (Math.random() - 0.5) * 800;
@@ -453,6 +456,46 @@
       for (let i = flowers.length - 1; i >= 0; i--) {
         if (now - flowers[i].spawnTime > flowers[i].lifespan) {
           flowers.splice(i, 1); // 移除過期花
+        }
+      }
+
+      if (!flowerKnowledgeShown && !isGamePaused && !flowers.poisonous) {
+        for (let i = 0; i < flowers.length; i++) {
+          const f = flowers[i];
+
+          const dx = f.x - caterpillar.worldX;
+          const dy = f.y - caterpillar.worldY;
+          const dist = Math.hypot(dx, dy);
+
+          if (dist < 400) {
+            showKnowledgeDialog(
+              ["花是蝴蝶的食物。"],
+              (f.x - camera.x > 400) ? (f.x - camera.x - 160) : (f.x - camera.x + 160),
+              (f.y - camera.y > 400) ? (f.y - camera.y - 160) : (f.y - camera.y + 160)
+            );
+            flowerKnowledgeShown = true;
+            isGamePaused = true;
+            break;
+          }
+        }
+      } else if (!poisonedflowerKnowledgeShown && !isGamePaused && flowers.poisonous) {
+        for (let i = 0; i < flowers.length; i++) {
+          const f = flowers[i];
+
+          const dx = f.x - caterpillar.worldX;
+          const dy = f.y - caterpillar.worldY;
+          const dist = Math.hypot(dx, dy);
+
+          if (dist < 400) {
+            showKnowledgeDialog(
+              ["被撒過農藥的花是有毒的。"],
+              f.x - camera.x - 160,
+              f.y - camera.y + 40
+            );
+            poisonedflowerKnowledgeShown = true;
+            isGamePaused = true;
+            break;
+          }
         }
       }
 
@@ -864,6 +907,8 @@
     const enemyLifetime = 10000; // 存在 10 秒
     const enemySafeRadius = 200; // 與玩家距離 < 200px 不生成
 
+    let enemyKnowledgeShown = false;
+
     let scorpionProjectiles = []; // 蠍子毒針
     let frogTongues = []; // 存放所有青蛙舌頭
     const webImg = new Image();
@@ -901,6 +946,43 @@
 
     function updateEnemies() {
       const now = Date.now();
+
+      if (!enemyKnowledgeShown && !isGamePaused) {
+        for (let i = 0; i < enemies.length; i++) {
+          const e = enemies[i];
+
+          const dx = e.x - caterpillar.worldX;
+          const dy = e.y - caterpillar.worldY;
+          const dist = Math.hypot(dx, dy);
+
+          if (dist < caterpillarVision.range) {
+            // 計算毛毛蟲面對的方向向量
+            const dirX = Math.cos(caterpillar.facingAngle);
+            const dirY = Math.sin(caterpillar.facingAngle);
+
+            // 計算乳草方向向量的單位向量
+            const toEnemyX = dx / dist;
+            const toEnemyY = dy / dist;
+
+            // 內積結果即兩角度差之餘弦值
+            const dot = dirX * toEnemyX + dirY * toEnemyY;
+            const angleBetween = Math.acos(dot);
+
+            if (angleBetween < caterpillarVision.angle / 2) {
+              // ✅ 在視野範圍內
+              showKnowledgeDialog(
+                ["遠離天敵！"],
+                e.x - camera.x - 160,
+                e.y - camera.y + 40
+              );
+              enemyKnowledgeShown = true;
+              isGamePaused = true;
+              break;
+            }
+          }
+        }
+      }
+      
       for (let i = enemies.length - 1; i >= 0; i--) {
         const e = enemies[i];
 
@@ -1481,7 +1563,7 @@
         "你需要移動身體才能看到更多的世界。",
         "小心四周，危險可能就在你看不到的地方。"
       ],
-      150, 130, // 對話框位置
+      150, 200, // 對話框位置
       () => {
         showKnowledgeDialog(
           [
@@ -1489,7 +1571,7 @@
             "能量耗盡之時，便是葬身之日。",
             "開始你新的一生吧！"
           ],
-          120, 370, // 對話框位置
+          150, 500, // 對話框位置
         );
       }
     );
