@@ -365,8 +365,8 @@
               // ✅ 在視野範圍內
               showKnowledgeDialog(
                 ["乳草是毛毛蟲的食物。"],
-                mw.x - camera.x - 160,
-                mw.y - camera.y + 40
+                (mw.x - camera.x > 400) ? (mw.x - camera.x - 160) : (mw.x - camera.x + 160),
+                (mw.y - camera.y > 400) ? (mw.y - camera.y - 160) : (mw.y - camera.y + 160)
               );
               milkweedKnowledgeShown = true;
               isGamePaused = true;
@@ -459,7 +459,7 @@
         }
       }
 
-      if (!flowerKnowledgeShown && !isGamePaused && !flowers.poisonous) {
+      if (!isGamePaused) {
         for (let i = 0; i < flowers.length; i++) {
           const f = flowers[i];
 
@@ -468,33 +468,25 @@
           const dist = Math.hypot(dx, dy);
 
           if (dist < 400) {
-            showKnowledgeDialog(
-              ["花是蝴蝶的食物。"],
-              (f.x - camera.x > 400) ? (f.x - camera.x - 160) : (f.x - camera.x + 160),
-              (f.y - camera.y > 400) ? (f.y - camera.y - 160) : (f.y - camera.y + 160)
-            );
-            flowerKnowledgeShown = true;
-            isGamePaused = true;
-            break;
-          }
-        }
-      } else if (!poisonedflowerKnowledgeShown && !isGamePaused && flowers.poisonous) {
-        for (let i = 0; i < flowers.length; i++) {
-          const f = flowers[i];
-
-          const dx = f.x - caterpillar.worldX;
-          const dy = f.y - caterpillar.worldY;
-          const dist = Math.hypot(dx, dy);
-
-          if (dist < 400) {
-            showKnowledgeDialog(
-              ["被撒過農藥的花是有毒的。"],
-              f.x - camera.x - 160,
-              f.y - camera.y + 40
-            );
-            poisonedflowerKnowledgeShown = true;
-            isGamePaused = true;
-            break;
+            if (f.poisonous && !poisonedflowerKnowledgeShown) {
+              showKnowledgeDialog(
+                ["被撒過農藥的花是有毒的。"],
+                (f.x - camera.x > 400) ? (f.x - camera.x - 160) : (f.x - camera.x + 160),
+                (f.y - camera.y > 400) ? (f.y - camera.y - 160) : (f.y - camera.y + 160)
+              );
+              poisonedflowerKnowledgeShown = true;
+              isGamePaused = true;
+              break;
+            } else if (!f.poisonous && !flowerKnowledgeShown) {
+              showKnowledgeDialog(
+                ["花是蝴蝶的食物。"],
+                (f.x - camera.x > 400) ? (f.x - camera.x - 160) : (f.x - camera.x + 160),
+                (f.y - camera.y > 400) ? (f.y - camera.y - 160) : (f.y - camera.y + 160)
+              );
+              flowerKnowledgeShown = true;
+              isGamePaused = true;
+              break;
+            }
           }
         }
       }
@@ -971,9 +963,12 @@
             if (angleBetween < caterpillarVision.angle / 2) {
               // ✅ 在視野範圍內
               showKnowledgeDialog(
-                ["遠離天敵！"],
-                e.x - camera.x - 160,
-                e.y - camera.y + 40
+                [
+                  "遠離各種天敵！",
+                  "在你變成蝴蝶後它們會更加兇猛。"
+                ],
+                (e.x - camera.x > 400) ? (e.x - camera.x - 160) : (e.x - camera.x + 160),
+                (e.y - camera.y > 400) ? (e.y - camera.y - 160) : (e.y - camera.y + 160)
               );
               enemyKnowledgeShown = true;
               isGamePaused = true;
@@ -1264,7 +1259,7 @@
     //--------------凍結、出現森林------------------------------------------
     let southMode = false;
     let freezeStartTime = null;
-    let freezeSpeed = 0.02; // 每毫秒往下移動的距離
+    let freezeSpeed = 0.04; // 每毫秒往下移動的距離
     let freezeLineY = null;
     let forestY = null;
     const forestX = 0;
@@ -1278,6 +1273,25 @@
         freezeStartTime = Date.now();
         freezeLineY = caterpillar.worldY - 300; // 初始凍結線稍微在上方
         forestY = caterpillar.worldY + 4000;    // 森林位置
+
+        showKnowledgeDialog(
+          [
+            "為了躲避嚴寒，你必須一路向南。"
+          ],
+          400, freezeLineY - camera.y,
+          () => {
+            showKnowledgeDialog(
+              [
+                "蝴蝶如何知道自己要飛往哪裡？",
+                "這依舊是個謎。",
+                "蝴蝶觸鬚有追蹤太陽位置的機制。",
+                "沿著右上角指標飛行，找到最終的目的地！"
+              ],
+              700, 100,
+            );
+          }
+        );
+        isGamePaused = true;
       }
     }
 
@@ -1530,12 +1544,36 @@
       const textEl = document.getElementById("dialog-text");
       const btn = document.getElementById("dialog-continue-btn");
 
-      // 設定位置（對話框左上角位置）
-      dialog.style.left = `${x}px`;
-      dialog.style.top = `${y}px`;
-
       // 顯示對話框
       dialog.style.display = "block";
+
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = rect.width / game.width;   // X 軸縮放比例
+      const scaleY = rect.height / game.height; // Y 軸縮放比例
+
+      // 把 canvas 座標轉成螢幕座標
+      let screenX = rect.left + (x * scaleX); // rect.left 是 canvas 左上角在螢幕上的位置
+      let screenY = rect.top + (y * scaleY);
+
+      // 設定位置（對話框左上角位置）
+      // 取得實際寬高
+      const dialogWidth = dialog.offsetWidth;
+      const dialogHeight = dialog.offsetHeight;
+      // 修正 X：不超出畫布
+      if (screenX + dialogWidth > rect.right) {
+        screenX = rect.right - dialogWidth - 10;
+      }
+      if (screenX < rect.left) screenX = rect.left + 10;
+
+      // 修正 Y：不超出畫布
+      if (screenY + dialogHeight > rect.bottom) {
+        screenY = rect.bottom - dialogHeight - 10;
+      }
+      if (screenY < rect.top) screenY = rect.top + 10;
+
+      // 更新修正後的位置
+      dialog.style.left = `${screenX}px`;
+      dialog.style.top = `${screenY}px`;
 
       // 顯示第一段
       textEl.textContent = pages[currentDialogIndex];
@@ -1567,7 +1605,7 @@
       () => {
         showKnowledgeDialog(
           [
-            "需要透過進食來補充能量 (藍條) 。",
+            "需要透過進食來補充能量 (藍條)。",
             "能量耗盡之時，便是葬身之日。",
             "開始你新的一生吧！"
           ],
