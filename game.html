@@ -1278,7 +1278,7 @@
           [
             "為了躲避嚴寒，你必須一路向南。"
           ],
-          400, freezeLineY - camera.y,
+          100, freezeLineY - camera.y,
           () => {
             showKnowledgeDialog(
               [
@@ -1287,7 +1287,7 @@
                 "蝴蝶觸鬚有追蹤太陽位置的機制。",
                 "沿著右上角指標飛行，找到最終的目的地！"
               ],
-              700, 100,
+              700, 200,
             );
           }
         );
@@ -1352,8 +1352,8 @@
       const dist = Math.hypot(dx, dy);
       const angle = Math.atan2(dy, dx) + Math.PI / 2;
 
-      const centerX = canvas.width - 60;
-      const centerY = 60;
+      const centerX = canvas.width - 120;
+      const centerY = 120;
 
       ctx.save();
       ctx.translate(centerX, centerY);
@@ -1361,20 +1361,20 @@
       
       // 畫箭頭
       ctx.beginPath();
-      ctx.moveTo(0, -10);
-      ctx.lineTo(6, 10);
-      ctx.lineTo(-6, 10);
+      ctx.moveTo(0, -20);
+      ctx.lineTo(12, 20);
+      ctx.lineTo(-12, 20);
       ctx.closePath();
-      ctx.fillStyle = "green";
+      ctx.fillStyle = "yellow";
       ctx.fill();
 
       ctx.restore();
 
       // 顯示剩餘公里數
       const kmLeft = dist.toFixed(1);
-      ctx.font = "16px Arial";
+      ctx.font = "32px Arial";
       ctx.fillStyle = "white";
-      ctx.fillText(`${kmLeft} km`, centerX - 30, centerY + 30);
+      ctx.fillText(`${kmLeft} km`, centerX - 60, centerY + 60);
     }
 
     //-----凍結區視覺效果-------------
