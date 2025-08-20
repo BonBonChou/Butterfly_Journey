@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>結尾頁面</title>
+  <title>失敗結尾頁面</title>
   <style>
     body {
       margin: 0;
@@ -13,7 +13,6 @@
       font-family: 'Noto Sans TC', sans-serif;
       color: white;
       text-align: center;
-      height: 100%;
     }
 
     .hidden { display: none; }
@@ -111,21 +110,19 @@
   <div class="container">
     <div id="final-message-screen">
       <h1>Game Over</h1>
-      <h4>在這場橫跨宇宙的航行中，<br>從太陽系啟程，<br>一路見證恆星的生老病死，<br>最後看見壯麗的宇宙。<br><br>在這廣袤無垠的宇宙中，<br>地球或許只是一顆微小的藍色星球，</h4>
-      <h2 id="final-highlight">但正是這顆星球，<br>讓我們能仰望星空、探索宇宙。</h2>
+      <h4>我拼命掙扎，<br>卻依舊沒能逃脫命運的獵殺。<br>翅膀還未完全舒展，<br>生命便在黑暗中熄滅。<br><br>世界不會因我的倒下而停歇，<br>樹葉依舊搖曳，風依舊吹拂，<br>只是少了我的翅膀，<br>再也無法觸碰天空……</h4>
+      <h2 id="final-highlight">若有下一次重生，<br>我必將逆轉宿命，展翼於蒼穹！</h2>
       <div class="endscore-display" id="endscore-display"></div>
-      <button onclick="restartGame()">重新探索宇宙</button>
+      <button onclick="restartGame()">重生</button>
     </div>
   </div>
 
   <script>
     window.addEventListener('DOMContentLoaded', () => {
-      const score = localStorage.getItem('score') || 0;
-      document.getElementById("endscore-display").textContent = `你的總分：${score}`;
+      document.getElementById("endscore-display").textContent = `你的總分：0`;
     });
     function restartGame() {
-      localStorage.removeItem('score');  // 清除總分
-      localStorage.removeItem('fuel');   // 清除燃料
+      localStorage.removeItem('gameTime');  // 清除總分
       location.href = "https://bonbonchou.github.io/Butterfly_Journey/index.html";
     }
   </script>
