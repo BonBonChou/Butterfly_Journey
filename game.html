@@ -482,7 +482,7 @@
             if (f.poisonous && !poisonedflowerKnowledgeShown) {
               showKnowledgeDialog(
                 [
-                  "被撒過農藥的花是有毒的。",
+                  "被撒過農藥的花 (紫花) 是有毒的。",
                   "人類對於農地的開發，也使各種動物原始棲地喪失。",
                   "全球暖化導致的氣候變遷也使得蝴蝶遷徙更加困難。"
                 ],
@@ -997,7 +997,8 @@
               showKnowledgeDialog(
                 [
                   "遠離各種天敵！",
-                  "在你變成蝴蝶後它們會更加兇猛。"
+                  "在你變成蝴蝶後它們會更加兇猛。",
+                  "譬如：蠍子會射出毒針 (紅色三角形)。"
                 ],
                 (e.x - camera.x > 400) ? (e.x - camera.x - 160) : (e.x - camera.x + 160),
                 (e.y - camera.y > 400) ? (e.y - camera.y - 160) : (e.y - camera.y + 160)
