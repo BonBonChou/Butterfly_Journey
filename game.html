@@ -742,7 +742,7 @@
         name: "羽化祝福", 
         desc: () => "結蛹蛻變成蝴蝶", 
         maxPick: 1,
-        onlyLevel: 10,
+        onlyLevel: 8,
         apply: () => {
           // 變身為蝴蝶
           caterpillarImg = butterflyImg;
@@ -792,7 +792,7 @@
 
     // 升級觸發
     function triggerLevelUpEvent() {
-      if (caterpillar.level === 2) {
+      if (caterpillar.level === 8) {
         const blessing = upgrades.find(u => u.id === "metamorph");
         if (blessing) {
           showUpgradeChoices([blessing]); // 只顯示羽化祝福
@@ -1303,7 +1303,7 @@
     forestImg.src = 'https://raw.githubusercontent.com/BonBonChou/Butterfly_Journey/main/images/forest.png';
 
     function checkSouthMigrationTrigger() {
-      if (!southMode && caterpillar.level >= 3) {
+      if (!southMode && caterpillar.level >= 12) {
         southMode = true;
         freezeStartTime = Date.now();
         freezeLineY = caterpillar.worldY - 300; // 初始凍結線稍微在上方
@@ -1350,7 +1350,7 @@
       const dx = forestX - caterpillar.worldX;
       const dy = forestY - caterpillar.worldY;
       const dist = Math.hypot(dx, dy);
-      if (dist < 100) { // 到達範圍
+      if (dist < 150) { // 到達範圍
         localStorage.setItem('gameTime', gameTime);
         window.location.href = "https://bonbonchou.github.io/Butterfly_Journey/ending.html";
       }
