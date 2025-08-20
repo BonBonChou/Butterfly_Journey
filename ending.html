@@ -112,19 +112,36 @@
       <h2 id="final-highlight">如今，我化作永恆的羽翼，<br>在勝利的光芒中，<br>銘刻「不屈」的真名！</h2>
       <div class="endscore-display" id="endscore-display"></div>
       <button onclick="restartGame()">再度踏上旅程</button>
+      <div id="info-link" style="margin-top: 1em;"></div>
     </div>
   </div>
 
   <script>
     window.addEventListener('DOMContentLoaded', () => {
       const t = localStorage.getItem('gameTime') || 0;
-      const score = max(100, 50000 / (t - 250) )
+      const score = Math.max(100, 50000 / (t - 250) );
       document.getElementById("endscore-display").textContent = `你的總分：${score}`;
     });
     function restartGame() {
       localStorage.removeItem('gameTime');  // 清除總分
       location.href = "https://bonbonchou.github.io/Butterfly_Journey/index.html";
     }
+    function formatknowledge(knowledge) {
+      return knowledge
+        .replace(/\n/g, "<br>") // 若你 intro 裡是用換行符號斷行，也可以加這行
+        .replace(/\s{2,}/g, ""); // 清除多餘空白
+    }
+    const link = [
+      { text: "毛毛蟲：由 John Owens (talk) - 自己的作品, CC BY 2.5", url: "https://commons.wikimedia.org/w/index.php?curid=212631"},
+      { text: "蝴蝶：由 © Derek Ramsey / derekramsey.com, GFDL 1.2", url: "https://commons.wikimedia.org/w/index.php?curid=2477662"},
+      { text: "乳草：由 Photo by and (c)2008 Derek Ramsey (Ram-Man) - 自行拍攝, GFDL 1.2", url: "https://commons.wikimedia.org/w/index.php?curid=4079279"},
+      { text: "花：由 Photo by and (c)2007 Derek Ramsey (Ram-Man) - 自己的作品, GFDL 1.2", url: "https://commons.wikimedia.org/w/index.php?curid=2595513"}
+    ]
+    const linkArea = document.getElementById("info-link");
+    linkArea.innerHTML = "<p>Credits</p>";
+    link.forEach(l => {
+      linkArea.innerHTML += `<a href="${l.url}" target="_blank" style="display:block; color:#00ccff;">${l.text}</a>`;
+    });
   </script>
 
 </body>
