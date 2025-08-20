@@ -108,21 +108,21 @@
   <div class="container">
     <div id="final-message-screen">
       <h1>🌟 遊戲結束！</h1>
-      <h4>在這場橫跨宇宙的航行中，<br>從太陽系啟程，<br>一路見證恆星的生老病死，<br>最後看見壯麗的宇宙。<br><br>在這廣袤無垠的宇宙中，<br>地球或許只是一顆微小的藍色星球，</h4>
-      <h2 id="final-highlight">但正是這顆星球，<br>讓我們能仰望星空、探索宇宙。</h2>
+      <h4>自無盡黑暗中掙扎，<br>我曾是脆弱的蟲蛹，<br>任憑天敵追逐、烈陽灼燒、毒霧環伺。<br><br>然而命運未能將我吞噬，<br>因為我選擇了反抗，<br>選擇了振翅高飛。<br><br>四千公里的試煉之路，<br>每一道傷痕，都是我的勳章。</h4>
+      <h2 id="final-highlight">如今，我化作永恆的羽翼，<br>在勝利的光芒中，<br>銘刻「不屈」的真名！</h2>
       <div class="endscore-display" id="endscore-display"></div>
-      <button onclick="restartGame()">重新探索宇宙</button>
+      <button onclick="restartGame()">再度踏上旅程</button>
     </div>
   </div>
 
   <script>
     window.addEventListener('DOMContentLoaded', () => {
-      const score = localStorage.getItem('score') || 0;
+      const t = localStorage.getItem('gameTime') || 0;
+      const score = max(100, 50000 / (t - 250) )
       document.getElementById("endscore-display").textContent = `你的總分：${score}`;
     });
     function restartGame() {
-      localStorage.removeItem('score');  // 清除總分
-      localStorage.removeItem('fuel');   // 清除燃料
+      localStorage.removeItem('gameTime');  // 清除總分
       location.href = "https://bonbonchou.github.io/Butterfly_Journey/index.html";
     }
   </script>
